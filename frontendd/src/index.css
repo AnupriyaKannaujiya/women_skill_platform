@@ -235,7 +235,7 @@ button.chip.active { background: var(--ink); color: white; }
   display: inline-flex; align-items: center; border-radius: 999px; padding: 4px 10px;
   background: var(--sand); font-size: 0.82rem; font-weight: 600; text-transform: capitalize;
 }
-.section-head a, .auth-card a, .main p a { color: var(--clay-deep); font-weight: 600; }
+.section-head a, .auth-card a:not(.btn), .main p a { color: var(--clay-deep); font-weight: 600; }
 .badge-pending, .badge-blocked { background: #f4e4c4; color: var(--warn); }
 .badge-accepted, .badge-active, .badge-paid { background: #dceee4; color: var(--sage); }
 .badge-completed { background: #f3e1d6; color: var(--clay-deep); }

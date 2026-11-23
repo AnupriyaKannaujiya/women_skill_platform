@@ -42,6 +42,15 @@ const authMiddleware = async (req, res, next) => {
       });
     }
 
+    // After a password change or reset, older sessions on other devices are signed out.
+    // JWT iat is in seconds; allow 1s of clock rounding.
+    if (user.passwordChangedAt && decoded.iat * 1000 < user.passwordChangedAt.getTime() - 1000) {
+      return res.status(401).json({
+        success: false,
+        message: "Your password was changed. Please log in again.",
+      });
+    }
+
     req.user = user;
 
     next();

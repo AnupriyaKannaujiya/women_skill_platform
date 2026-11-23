@@ -79,7 +79,12 @@ export function Frame() {
   const location = useLocation();
   const { token, user } = useAuth();
   const app = isAppPath(pathname);
-  const bare = pathname === "/login" || pathname === "/register";
+  // Full-screen auth pages without the site header and footer.
+  const bare =
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname === "/forgot-password" ||
+    pathname.startsWith("/reset-password/");
 
   if (app) {
     if (!token || !user) {

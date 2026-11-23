@@ -93,7 +93,13 @@ function Login() {
             <button className="btn btn-ghost btn-sm" type="button" onClick={() => setShow((value) => !value)}>
               {show ? "Hide password" : "Show password"}
             </button>
-            <span className="help">Reset by email is not available yet.</span>
+            <Link
+              className="help"
+              to="/forgot-password"
+              state={form.email.trim() ? { email: form.email.trim() } : undefined}
+            >
+              Forgot password?
+            </Link>
           </div>
           <button className="btn btn-primary btn-block" type="submit" disabled={loading}>
             {loading ? "Logging in…" : "Log in"}

@@ -1,12 +1,14 @@
 import { useState } from "react";
 import api from "../../lib/api";
 import { useToast } from "../../context/ToastContext";
+import { useAuth } from "../../context/AuthContext";
 import { usePageTitle } from "../../lib/usePageTitle";
 import { getError } from "../../lib/format";
 
 function Password() {
   usePageTitle("Password");
   const toast = useToast();
+  const { login, user } = useAuth();
   const [form, setForm] = useState({ currentPassword: "", newPassword: "", confirm: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -37,6 +39,8 @@ function Password() {
         currentPassword: form.currentPassword,
         newPassword: form.newPassword,
       });
+      // The server signs out older sessions; keep this one by storing the fresh token.
+      if (response.data.token) login(response.data.token, user);
       toast(response.data.message || "Password changed.", "ok");
       setForm({ currentPassword: "", newPassword: "", confirm: "" });
     } catch (error) {

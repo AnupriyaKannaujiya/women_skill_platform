@@ -36,6 +36,18 @@ Open http://localhost:5173. To point the frontend at another API, set
 VITE_API_URL=https://api.example.com/api
 ```
 
+## Password reset email
+
+"Forgot password?" on the login page emails a link that is valid for 30 minutes.
+Only a hash of the link's token is stored, and using it signs the account out everywhere.
+
+- **Development:** with `SMTP_HOST` empty, no email is sent. The reset link is printed
+  in the backend console and appended to `backend/dev-mail.log`.
+- **Real email:** fill `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` and `MAIL_FROM`
+  in `backend/.env` (see `.env.example` for Gmail and Brevo settings), then restart the API.
+- **Live server:** set `NODE_ENV=production` and `CLIENT_URL` to the real site address,
+  so links point to it and a missing SMTP setup shows up as an error.
+
 ## Roles
 
 | Role | Can do |
@@ -73,7 +85,7 @@ pending ──accept──► accepted ──complete (after booking date)──
 
 | Area | Endpoints |
 |---|---|
-| Auth | `POST /api/auth/register`, `POST /api/auth/login`, `GET/PUT /api/auth/profile`, `PUT /api/auth/change-password`, photo and portfolio uploads |
+| Auth | `POST /api/auth/register`, `POST /api/auth/login`, `GET/PUT /api/auth/profile`, `PUT /api/auth/change-password`, `POST /api/auth/forgot-password`, `POST /api/auth/reset-password/:token`, photo and portfolio uploads |
 | Providers | `GET /api/users/search`, `GET /api/users/:id` |
 | Bookings | `POST /api/bookings`, `GET /api/bookings/my`, `GET /api/bookings/provider`, `PUT /api/bookings/:id/status`, `PUT /api/bookings/:id/cancel` |
 | Reviews | `POST /api/reviews`, `PUT/DELETE /api/reviews/:id`, `GET /api/reviews/:providerId` |
