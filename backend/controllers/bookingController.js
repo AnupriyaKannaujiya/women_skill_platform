@@ -1,14 +1,49 @@
+const handleError = require("../utils/handleError");
 const Booking = require("../models/Booking");
 const User = require("../models/User");
 const Review = require("../models/Review");
+const mongoose = require("mongoose");
+
+// Which status a booking may move to from its current status.
+// Anything not listed here (e.g. pending -> completed, completed -> rejected) is refused.
+const ALLOWED_TRANSITIONS = {
+  pending: ["accepted", "rejected"],
+  accepted: ["completed", "rejected"],
+  rejected: [],
+  completed: [],
+};
 
 const createBooking = async (req, res) => {
   try {
     const { provider, service, bookingDate, address, message } = req.body;
 
+    if (!mongoose.isValidObjectId(provider)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid provider",
+      });
+    }
+
+    const when = new Date(bookingDate);
+
+    if (Number.isNaN(when.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid booking date",
+      });
+    }
+
+    // Small grace window so a time picked "now" in the browser is not rejected.
+    if (when.getTime() < Date.now() - 5 * 60 * 1000) {
+      return res.status(400).json({
+        success: false,
+        message: "Booking date must be in the future",
+      });
+    }
+
     const providerUser = await User.findById(provider);
 
-    if (!providerUser) {
+    if (!providerUser || providerUser.isBlocked) {
       return res.status(404).json({
         message: "Provider not found",
       });
@@ -29,10 +64,10 @@ const createBooking = async (req, res) => {
     const booking = await Booking.create({
       customer: req.user.id,
       provider,
-      service,
-      bookingDate,
-      address,
-      message,
+      service: String(service).trim(),
+      bookingDate: when,
+      address: String(address).trim(),
+      message: message ? String(message).trim() : undefined,
     });
 
     res.status(201).json({
@@ -41,9 +76,7 @@ const createBooking = async (req, res) => {
       booking,
     });
   } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
+    handleError(res, error);
   }
 };
 
@@ -61,9 +94,7 @@ const getMyBookings = async (req, res) => {
       bookings,
     });
   } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
+    handleError(res, error);
   }
 };
 
@@ -81,9 +112,7 @@ const getProviderBookings = async (req, res) => {
       bookings,
     });
   } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
+    handleError(res, error);
   }
 };
 
@@ -111,6 +140,22 @@ const updateBookingStatus = async (req, res) => {
       });
     }
 
+    if (!ALLOWED_TRANSITIONS[booking.status]?.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: `A ${booking.status} booking cannot be marked ${status}`,
+      });
+    }
+
+    // Work cannot be finished before the day it was booked for. This also stops
+    // accept-and-complete-instantly being used to unlock fake reviews.
+    if (status === "completed" && booking.bookingDate.getTime() > Date.now()) {
+      return res.status(400).json({
+        success: false,
+        message: "This booking can be marked completed only after its booking date",
+      });
+    }
+
     booking.status = status;
 
     await booking.save();
@@ -121,9 +166,7 @@ const updateBookingStatus = async (req, res) => {
       booking,
     });
   } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
+    handleError(res, error);
   }
 };
 
@@ -166,9 +209,7 @@ const getProviderDashboard = async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
+    handleError(res, error);
   }
 };
 
@@ -205,9 +246,7 @@ const getCustomerDashboard = async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
+    handleError(res, error);
   }
 };
 

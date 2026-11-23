@@ -48,7 +48,12 @@ router.put(
   updateBookingStatus,
 );
 
-router.get("/provider/dashboard", authMiddleware, getProviderDashboard);
+router.get(
+  "/provider/dashboard",
+  authMiddleware,
+  roleMiddleware("provider"),
+  getProviderDashboard,
+);
 
 router.get(
   "/customer/dashboard",

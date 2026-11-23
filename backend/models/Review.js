@@ -29,4 +29,7 @@ const reviewSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// One review per customer per provider, enforced by the database as well as the controller.
+reviewSchema.index({ reviewer: 1, provider: 1 }, { unique: true });
+
 module.exports = mongoose.model("Review", reviewSchema);
