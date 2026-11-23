@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../lib/api";
+import { useAuth } from "../context/AuthContext";
 import categories from "../data/categories";
 import ProviderCard from "../components/ProviderCard";
 import { Loading } from "../components/ui";
@@ -10,6 +11,8 @@ import { formatMoney, skillLabel } from "../lib/format";
 function Home() {
   usePageTitle("Find skilled women");
   const navigate = useNavigate();
+  const { token, user } = useAuth();
+  const signedIn = Boolean(token && user);
   const [skill, setSkill] = useState("");
   const [city, setCity] = useState("");
   const [providers, setProviders] = useState([]);
@@ -179,6 +182,7 @@ function Home() {
         </div>
       </section>
 
+      {signedIn ? null : (
       <div className="container">
         <section className="band">
           <div>
@@ -190,6 +194,7 @@ function Home() {
           </Link>
         </section>
       </div>
+      )}
     </>
   );
 }

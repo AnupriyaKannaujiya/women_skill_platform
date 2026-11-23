@@ -2,9 +2,10 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../lib/api";
 import Brand from "../components/Brand";
+import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { usePageTitle } from "../lib/usePageTitle";
-import { getError, textToSkills } from "../lib/format";
+import { getError, homeFor, textToSkills } from "../lib/format";
 
 const blank = {
   name: "",
@@ -24,6 +25,7 @@ const blank = {
 function Register() {
   usePageTitle("Join");
   const navigate = useNavigate();
+  const { login } = useAuth();
   const toast = useToast();
   const [form, setForm] = useState(blank);
   const [show, setShow] = useState(false);
@@ -67,11 +69,26 @@ function Register() {
 
     setLoading(true);
     try {
-      const response = await api.post("/auth/register", payload);
-      toast(response.data.message || "Account created.", "ok");
-      navigate("/login");
+      await api.post("/auth/register", payload);
     } catch (error) {
       toast(getError(error), "error");
+      setLoading(false);
+      return;
+    }
+
+    // Sign the new user straight in. If that fails for any reason, the account
+    // still exists, so send them to the login page with the email filled in.
+    try {
+      const response = await api.post("/auth/login", {
+        email: payload.email,
+        password: payload.password,
+      });
+      login(response.data.token, response.data.user);
+      toast("Welcome! Your account is ready.", "ok");
+      navigate(homeFor(response.data.user.role), { replace: true });
+    } catch {
+      toast("Account created. Please log in.", "ok");
+      navigate("/login", { state: { email: payload.email } });
     } finally {
       setLoading(false);
     }
@@ -129,7 +146,7 @@ function Register() {
             <>
               <label className="field">
                 <span>Skills <em className="help">separate with commas</em></span>
-                <input name="skill" placeholder="Mehndi, Bridal makeup" value={form.skill} onChange={update} />
+                <input name="skill" placeholder="e.g. Mehndi, Bridal makeup" value={form.skill} onChange={update} />
                 {errors.skill ? <span className="error-text">{errors.skill}</span> : null}
               </label>
               <div className="field-row">

@@ -9,19 +9,28 @@ function Password() {
   const toast = useToast();
   const [form, setForm] = useState({ currentPassword: "", newPassword: "", confirm: "" });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const update = (event) => setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
+  // Any edit clears the previous validation message, so it never lingers after a fix.
+  const update = (event) => {
+    setError("");
+    setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
+  };
+
+  const mismatch = form.confirm !== "" && form.newPassword !== form.confirm;
 
   const submit = async (event) => {
     event.preventDefault();
     if (!form.currentPassword || form.newPassword.length < 6) {
-      toast("Enter your current password and a new one of at least 6 characters.", "error");
+      setError("Enter your current password and a new one of at least 6 characters.");
       return;
     }
     if (form.newPassword !== form.confirm) {
-      toast("The new passwords do not match.", "error");
+      // A typed-but-different confirm already shows its own hint under the field.
+      if (!form.confirm) setError("Type the new password again to confirm it.");
       return;
     }
+    setError("");
     setLoading(true);
     try {
       const response = await api.put("/auth/change-password", {
@@ -51,8 +60,17 @@ function Password() {
       </label>
       <label className="field">
         <span>Confirm new password</span>
-        <input name="confirm" type="password" autoComplete="new-password" value={form.confirm} onChange={update} />
+        <input
+          name="confirm"
+          type="password"
+          autoComplete="new-password"
+          value={form.confirm}
+          onChange={update}
+          aria-invalid={mismatch}
+        />
+        {mismatch ? <span className="error-text">Does not match the new password yet.</span> : null}
       </label>
+      {error ? <p className="error-text" role="alert" style={{ marginBottom: 12 }}>{error}</p> : null}
       <button className="btn btn-primary" type="submit" disabled={loading}>
         {loading ? "Updating…" : "Update password"}
       </button>

@@ -1,8 +1,11 @@
 import { Link } from "react-router-dom";
 import { usePageTitle } from "../lib/usePageTitle";
+import { useAuth } from "../context/AuthContext";
 
 function About() {
   usePageTitle("About");
+  const { token, user } = useAuth();
+  const signedIn = Boolean(token && user);
   return (
     <div className="container page narrow">
       <p className="eyebrow">About</p>
@@ -41,7 +44,7 @@ function About() {
         </p>
         <div className="cluster" style={{ marginTop: 16 }}>
           <Link className="btn btn-primary" to="/providers">Find someone</Link>
-          <Link className="btn btn-line" to="/register">Create an account</Link>
+          {signedIn ? null : <Link className="btn btn-line" to="/register">Create an account</Link>}
         </div>
       </section>
     </div>

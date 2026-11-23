@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { usePageTitle } from "../lib/usePageTitle";
+import { useAuth } from "../context/AuthContext";
 
 function Contact() {
   usePageTitle("Contact");
+  const { token, user } = useAuth();
+  const signedIn = Boolean(token && user);
   const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
@@ -35,7 +38,7 @@ function Contact() {
           </p>
           <div className="cluster" style={{ marginTop: 18 }}>
             <Link className="btn btn-primary" to="/providers">Find a woman</Link>
-            <Link className="btn btn-line" to="/register">Join as a provider</Link>
+            {signedIn ? null : <Link className="btn btn-line" to="/register">Join as a provider</Link>}
           </div>
         </div>
         <form className="card" onSubmit={submit}>

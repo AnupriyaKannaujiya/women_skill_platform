@@ -13,7 +13,8 @@ function Login() {
   const location = useLocation();
   const { login, token, user } = useAuth();
   const toast = useToast();
-  const [form, setForm] = useState({ email: "", password: "" });
+  // Coming from signup, the email is passed along so it does not need retyping.
+  const [form, setForm] = useState(() => ({ email: location.state?.email || "", password: "" }));
   const [show, setShow] = useState(false);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
