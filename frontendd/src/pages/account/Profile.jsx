@@ -35,6 +35,7 @@ function Profile() {
           price: profile.price ?? "",
           description: profile.description || "",
           photo: profile.photo || "",
+          emailNotifications: profile.emailNotifications !== false,
         });
         updateUser(profile);
       })
@@ -93,6 +94,7 @@ function Profile() {
         city: form.city.trim(),
         area: form.area.trim(),
         description: form.description.trim(),
+        emailNotifications: form.emailNotifications !== false,
       };
       if (photo) payload.photo = photo;
       if (isProvider) {
@@ -187,6 +189,19 @@ function Profile() {
             </label>
           </>
         ) : null}
+        <label className="check-field">
+          <input
+            type="checkbox"
+            checked={form.emailNotifications !== false}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, emailNotifications: event.target.checked }))
+            }
+          />
+          <span>
+            Email me about bookings and reviews{" "}
+            <em className="help">(the 🔔 bell in the app always shows them)</em>
+          </span>
+        </label>
         <button className="btn btn-primary" type="submit" disabled={saving}>
           {saving ? "Saving…" : "Save profile"}
         </button>

@@ -7,6 +7,7 @@ const { SELF_HIDDEN_FIELDS } = require("../utils/publicUser");
 const Booking = require("../models/Booking");
 const Review = require("../models/Review");
 const ContactMessage = require("../models/ContactMessage");
+const Notification = require("../models/Notification");
 const { expireStalePendingBookings, overdueFilter } = require("../utils/bookingMaintenance");
 
 const getAllUsers = async (req, res) => {
@@ -64,6 +65,8 @@ const deleteUser = async (req, res) => {
     await Review.deleteMany({
       $or: [{ reviewer: user._id }, { provider: user._id }],
     });
+
+    await Notification.deleteMany({ user: user._id });
     await user.deleteOne();
 
     for (const providerId of reviewedProviders) {

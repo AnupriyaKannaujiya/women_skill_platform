@@ -55,6 +55,11 @@ const bookingSchema = new mongoose.Schema(
       type: Date,
     },
 
+    // Set when the "booking is tomorrow" reminder has gone out, so it is sent once.
+    reminderSentAt: {
+      type: Date,
+    },
+
     paymentStatus: {
       type: String,
       enum: ["pending", "paid"],

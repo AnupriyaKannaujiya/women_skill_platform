@@ -159,6 +159,10 @@ const updateProfile = async (req, res) => {
 
     const updateData = { name, phone, whatsapp, city, area };
 
+    if (typeof req.body.emailNotifications === "boolean") {
+      updateData.emailNotifications = req.body.emailNotifications;
+    }
+
     if (req.user.role === "provider") {
       Object.assign(updateData, {
         skill: normalizeSkills(skill),
@@ -169,7 +173,7 @@ const updateProfile = async (req, res) => {
     }
 
     const updatedUser = await User.findByIdAndUpdate(req.user.id, updateData, {
-      new: true,
+      returnDocument: "after",
       runValidators: true,
     }).select(SELF_HIDDEN_FIELDS);
 
@@ -218,7 +222,7 @@ const uploadProfilePhoto = async (req, res) => {
         photo: result.secure_url,
       },
       {
-        new: true,
+        returnDocument: "after",
       },
     ).select(SELF_HIDDEN_FIELDS);
 

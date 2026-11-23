@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import Brand from "./Brand";
+import NotificationBell from "./NotificationBell";
 import { Avatar } from "./ui";
 import { useAuth } from "../context/AuthContext";
 import { homeFor } from "../lib/format";
@@ -32,17 +33,8 @@ function Header() {
     <header className="header">
       <div className="container header-bar">
         <Brand />
-        <button
-          className="nav-toggle"
-          type="button"
-          aria-label="Open menu"
-          aria-expanded={open}
-          onClick={() => setNavPath(open ? "" : location.pathname)}
-        >
-          <span />
-          <span />
-          <span />
-        </button>
+        {/* nav, bell and the mobile menu button sit together on the right */}
+        <div className="header-tools">
         <nav className={open ? "nav open" : "nav"}>
           <NavLink to="/" end>
             Home
@@ -92,6 +84,20 @@ function Header() {
             </div>
           )}
         </nav>
+        {/* Always visible (also on phones), so new booking updates are noticed. */}
+        {token && user ? <NotificationBell /> : null}
+        <button
+          className="nav-toggle"
+          type="button"
+          aria-label="Open menu"
+          aria-expanded={open}
+          onClick={() => setNavPath(open ? "" : location.pathname)}
+        >
+          <span />
+          <span />
+          <span />
+        </button>
+        </div>
       </div>
     </header>
   );

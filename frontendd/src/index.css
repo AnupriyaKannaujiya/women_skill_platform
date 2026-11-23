@@ -381,3 +381,40 @@ th { font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; colo
 }
 .check-field { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; font-weight: 600; font-size: 0.92rem; }
 .check-field input { width: 18px; height: 18px; accent-color: var(--clay); }
+
+/* Notification bell */
+.header-tools { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.bell { position: relative; }
+.bell-btn {
+  position: relative; display: grid; place-items: center; width: 42px; height: 42px;
+  border-radius: 50%; border: 1px solid var(--line); background: white; color: var(--ink); cursor: pointer;
+}
+.bell-btn:hover { background: var(--sand); }
+.bell-count {
+  position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; padding: 0 5px;
+  border-radius: 999px; background: var(--danger); color: white; font-size: 0.72rem; font-weight: 700;
+  display: grid; place-items: center; border: 2px solid var(--paper);
+}
+.bell-panel {
+  position: absolute; right: 0; top: calc(100% + 8px); width: min(380px, calc(100vw - 32px));
+  background: white; border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); z-index: 60;
+  overflow: hidden;
+}
+.bell-head { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.bell-list { list-style: none; margin: 0; padding: 0; max-height: min(420px, 70vh); overflow-y: auto; }
+.bell-item {
+  display: grid; gap: 3px; width: 100%; text-align: left; padding: 12px 14px 12px 22px; border: 0;
+  border-bottom: 1px solid var(--line); background: white; cursor: pointer; position: relative;
+}
+.bell-item:hover { background: #fbf7f2; }
+.bell-item.unread { background: #fdf6f1; }
+.bell-item.unread::before {
+  content: ""; position: absolute; left: 9px; top: 18px; width: 7px; height: 7px; border-radius: 50%; background: var(--clay);
+}
+.bell-title { font-weight: 700; font-size: 0.92rem; }
+.bell-body { color: var(--ink-soft); font-size: 0.86rem; line-height: 1.4; }
+.bell-time { color: var(--muted); font-size: 0.76rem; }
+.bell-empty { padding: 18px 14px; }
+@media (max-width: 760px) {
+  .bell-panel { position: fixed; left: 16px; right: 16px; top: 74px; width: auto; }
+}

@@ -62,6 +62,26 @@ Privacy rules built in:
   account is deleted. Only the status, ID type and dates are kept.
 - The provider gets an email with the outcome (uses the same SMTP settings as password reset).
 
+## Notifications
+
+Signed-in users have a 🔔 bell in the header with an unread count (refreshed on every page
+change, every minute and when the tab comes back into view). Each notification links to the
+right page. The same events are emailed, unless the person unticks "Email me about bookings
+and reviews" on their profile (ID-check results are always emailed).
+
+| Event | Who is told |
+|---|---|
+| New booking request | Provider |
+| Accepted / declined / completed / cancelled by provider | Customer |
+| Cancelled by customer | Provider |
+| Request expired without a reply | Both (provider in-app only) |
+| Booking within the next 24 hours (sent once) | Both |
+| New review | Provider |
+| ID verification approved / rejected | Provider |
+
+Notifications older than 90 days are removed automatically. Reminders and expiries are
+handled by the background job that runs at startup and every 15 minutes.
+
 ## Roles
 
 | Role | Can do |
@@ -104,5 +124,6 @@ pending ──accept──► accepted ──complete (after booking date)──
 | Bookings | `POST /api/bookings`, `GET /api/bookings/my`, `GET /api/bookings/provider`, `PUT /api/bookings/:id/status`, `PUT /api/bookings/:id/cancel` |
 | Reviews | `POST /api/reviews`, `PUT/DELETE /api/reviews/:id`, `GET /api/reviews/:providerId` |
 | Contact | `POST /api/contact` |
+| Notifications | `GET /api/notifications`, `GET /api/notifications/unread-count`, `PUT /api/notifications/:id/read`, `PUT /api/notifications/read-all` |
 | Verification | `GET /api/verification/me`, `POST /api/verification` (provider); `GET /api/admin/verifications`, `GET /api/admin/verifications/:id/document`, `PUT /api/admin/verifications/:id` (admin) |
 | Admin | `/api/admin/dashboard`, `/users`, `/bookings`, `/reviews`, `/messages`, `/verifications` |

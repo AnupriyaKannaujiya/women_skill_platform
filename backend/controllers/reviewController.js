@@ -3,6 +3,7 @@ const Review = require("../models/Review");
 const Booking = require("../models/Booking");
 const mongoose = require("mongoose");
 const { updateProviderRating } = require("../utils/rating");
+const { notify } = require("../utils/notify");
 
 const addReview = async (req, res) => {
   try {
@@ -44,6 +45,14 @@ const addReview = async (req, res) => {
     });
 
     await updateProviderRating(provider);
+
+    notify({
+      to: provider,
+      type: "review_new",
+      title: `${req.user.name} gave you ${rating} star${Number(rating) === 1 ? "" : "s"}`,
+      body: `New review: "${String(comment).slice(0, 140)}"`,
+      link: `/providers/${provider}`,
+    });
 
     res.status(201).json({
       success: true,

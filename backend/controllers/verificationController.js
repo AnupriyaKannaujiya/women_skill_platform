@@ -3,7 +3,7 @@ const streamifier = require("streamifier");
 const cloudinary = require("../config/cloudinary");
 const User = require("../models/User");
 const handleError = require("../utils/handleError");
-const { sendMail } = require("../utils/mailer");
+const { notify } = require("../utils/notify");
 
 const ID_TYPES = ["aadhaar", "pan", "voter", "driving", "passport", "other"];
 const DOCUMENT_LINK_TTL_SECONDS = 10 * 60;
@@ -193,14 +193,18 @@ const decideVerification = async (req, res) => {
     await destroyPrivate(documentId);
 
     // Tell her the outcome. Email problems must not undo the decision.
-    const firstName = String(user.name || "").split(" ")[0] || "there";
-    sendMail({
-      to: user.email,
-      subject: approved ? "Your Women Skill profile is verified" : "About your Women Skill ID check",
-      text: approved
-        ? `Hi ${firstName},\n\nGood news: your profile is now verified. Customers will see the Verified badge next to your name.\n\nWomen Skill`
-        : `Hi ${firstName},\n\nWe could not verify your ID this time.\nReason: ${note}\n\nYou can upload a new photo from the Verification page in your account.\n\nWomen Skill`,
-    }).catch((error) => console.error("Verification email failed:", error.message));
+    // Bell + email. The ID-check result is important, so it is emailed even if
+    // she turned off booking emails.
+    notify({
+      to: user,
+      type: approved ? "verification_approved" : "verification_rejected",
+      title: approved ? "Your Women Skill profile is verified" : "About your Women Skill ID check",
+      body: approved
+        ? "Good news: your ID was checked and customers now see the ✓ Verified badge next to your name."
+        : `We could not verify your ID this time. Reason: ${note}. You can upload a new photo from the Verification page.`,
+      link: "/provider/verification",
+      forceEmail: true,
+    });
 
     res.status(200).json({
       success: true,

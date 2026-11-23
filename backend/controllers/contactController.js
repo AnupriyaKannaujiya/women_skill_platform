@@ -63,7 +63,7 @@ const setMessageRead = async (req, res) => {
     const message = await ContactMessage.findByIdAndUpdate(
       req.params.id,
       { isRead: req.body.isRead !== false },
-      { new: true },
+      { returnDocument: "after" },
     );
 
     if (!message) {

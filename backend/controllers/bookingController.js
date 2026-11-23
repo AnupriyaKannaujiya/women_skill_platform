@@ -4,6 +4,7 @@ const User = require("../models/User");
 const Review = require("../models/Review");
 const mongoose = require("mongoose");
 const { expireStalePendingBookings, overdueFilter } = require("../utils/bookingMaintenance");
+const { notify, formatWhen } = require("../utils/notify");
 
 // Which status a provider may move a booking to from its current status.
 // Anything not listed here (e.g. pending -> completed, completed -> rejected) is refused.
@@ -92,6 +93,16 @@ const createBooking = async (req, res) => {
       bookingDate: when,
       address: String(address).trim(),
       message: message ? String(message).trim() : undefined,
+    });
+
+    // Not awaited: the customer should not wait for the provider's email to go out.
+    notify({
+      to: providerUser,
+      type: "booking_new",
+      title: `New booking request from ${req.user.name}`,
+      body: `${req.user.name} wants ${booking.service} on ${formatWhen(booking.bookingDate)}. Accept or decline it before that time, or it will expire.`,
+      link: "/provider/dashboard",
+      booking: booking._id,
     });
 
     res.status(201).json({
@@ -208,6 +219,37 @@ const updateBookingStatus = async (req, res) => {
     }
 
     await booking.save();
+
+    // Tell the customer what changed.
+    const providerName = req.user.name;
+    const when = formatWhen(booking.bookingDate);
+    const messages = {
+      accepted: {
+        title: `${providerName} accepted your booking`,
+        body: `Your ${booking.service} booking for ${when} is confirmed. You can now call or WhatsApp her from My bookings.`,
+      },
+      rejected: {
+        title: `${providerName} could not take your booking`,
+        body: `Your ${booking.service} request for ${when} was declined. You can find someone else for the same time.`,
+      },
+      completed: {
+        title: `How was ${booking.service} with ${providerName}?`,
+        body: `${providerName} marked your ${booking.service} booking as completed. Please leave a review — it helps other customers.`,
+      },
+      cancelled: {
+        title: `${providerName} cancelled your booking`,
+        body: `Your ${booking.service} booking for ${when} was cancelled by the provider. You can find someone else for the same time.`,
+      },
+    };
+
+    notify({
+      to: booking.customer,
+      type: `booking_${status}`,
+      ...messages[status],
+      // The profile shows "Write a review" only while a review is still due.
+      link: status === "completed" ? `/providers/${booking.provider}` : "/customer/dashboard",
+      booking: booking._id,
+    });
 
     res.status(200).json({
       success: true,
@@ -338,6 +380,15 @@ const cancelBooking = async (req, res) => {
     booking.cancelledBy = "customer";
     booking.cancelledAt = new Date();
     await booking.save();
+
+    notify({
+      to: booking.provider,
+      type: "booking_cancelled",
+      title: `${req.user.name} cancelled a booking`,
+      body: `The ${booking.service} booking for ${formatWhen(booking.bookingDate)} was cancelled by the customer. That time is free again.`,
+      link: "/provider/dashboard",
+      booking: booking._id,
+    });
 
     res.status(200).json({
       success: true,

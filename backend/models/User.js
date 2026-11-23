@@ -112,6 +112,12 @@ const userSchema = new mongoose.Schema(
       type: Date,
     },
 
+    // Booking and account emails (in-app notifications are always on).
+    emailNotifications: {
+      type: Boolean,
+      default: true,
+    },
+
     // Public flag shown as the "Verified" badge and used by the search filter.
     isVerified: {
       type: Boolean,
