@@ -55,10 +55,16 @@ db.users.updateOne({ email: "you@example.com" }, { $set: { role: "admin" } })
 ```
 pending ──accept──► accepted ──complete (after booking date)──► completed ──► review
    │                   │
+   │                   └──cancel──► cancelled (by provider, or by customer before the booking time)
    ├──reject──► rejected (by provider)
-   └──cancel──► cancelled (by customer, before the booking time)
+   ├──cancel──► cancelled (by customer, before the booking time)
+   └──booked time passes with no reply──► expired (automatic)
 ```
 
+- Unanswered requests expire automatically once their time passes (checked at
+  startup, every 15 minutes, and whenever booking lists are loaded).
+- Accepted bookings whose date has passed are shown as **Overdue** until the
+  provider marks them completed or cancels them; admins see a count on the overview.
 - A provider's phone and WhatsApp are shared with a customer only after she accepts.
 - A customer can have one pending request per provider at a time.
 - One review per customer per provider, only after a completed booking.
