@@ -86,7 +86,17 @@ const getMyBookings = async (req, res) => {
       customer: req.user.id,
     })
       .populate("provider", "name city phone whatsapp photo")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // The provider's phone/WhatsApp is shared only once she has accepted the request.
+    // Populated providers can be the same object across bookings, so copy before trimming.
+    for (const booking of bookings) {
+      if (booking.provider && !["accepted", "completed"].includes(booking.status)) {
+        const { phone, whatsapp, ...rest } = booking.provider; // eslint-disable-line no-unused-vars
+        booking.provider = rest;
+      }
+    }
 
     res.status(200).json({
       success: true,
