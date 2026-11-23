@@ -11,6 +11,7 @@ const ALLOWED_TRANSITIONS = {
   accepted: ["completed", "rejected"],
   rejected: [],
   completed: [],
+  cancelled: [],
 };
 
 const createBooking = async (req, res) => {
@@ -58,6 +59,21 @@ const createBooking = async (req, res) => {
     if (providerUser._id.toString() === req.user.id.toString()) {
       return res.status(400).json({
         message: "You cannot book yourself",
+      });
+    }
+
+    // One open request per provider at a time stops accidental double submits and spam.
+    const openRequest = await Booking.exists({
+      customer: req.user.id,
+      provider,
+      status: "pending",
+    });
+
+    if (openRequest) {
+      return res.status(409).json({
+        success: false,
+        message:
+          "You already have a pending request with her. Wait for her reply or cancel it from My bookings.",
       });
     }
 
@@ -260,11 +276,54 @@ const getCustomerDashboard = async (req, res) => {
   }
 };
 
+// A customer may withdraw her own request while it is still pending or accepted,
+// as long as the booked time has not passed.
+const cancelBooking = async (req, res) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(404).json({ success: false, message: "Booking not found" });
+    }
+
+    const booking = await Booking.findById(req.params.id);
+
+    if (!booking || booking.customer.toString() !== req.user.id.toString()) {
+      return res.status(404).json({ success: false, message: "Booking not found" });
+    }
+
+    if (!["pending", "accepted"].includes(booking.status)) {
+      return res.status(400).json({
+        success: false,
+        message: `A ${booking.status} booking cannot be cancelled`,
+      });
+    }
+
+    if (booking.bookingDate.getTime() <= Date.now()) {
+      return res.status(400).json({
+        success: false,
+        message: "This booking time has already passed",
+      });
+    }
+
+    booking.status = "cancelled";
+    booking.cancelledAt = new Date();
+    await booking.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Booking cancelled",
+      booking,
+    });
+  } catch (error) {
+    handleError(res, error);
+  }
+};
+
 module.exports = {
   createBooking,
   getMyBookings,
   getProviderBookings,
   updateBookingStatus,
+  cancelBooking,
   getProviderDashboard,
   getCustomerDashboard,
 };

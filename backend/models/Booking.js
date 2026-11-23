@@ -35,8 +35,13 @@ const bookingSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["pending", "accepted", "rejected", "completed"],
+      // "cancelled" = withdrawn by the customer; "rejected" = turned down by the provider.
+      enum: ["pending", "accepted", "rejected", "completed", "cancelled"],
       default: "pending",
+    },
+
+    cancelledAt: {
+      type: Date,
     },
 
     paymentStatus: {
@@ -49,5 +54,9 @@ const bookingSchema = new mongoose.Schema(
     timestamps: true,
   },
 );
+
+// Dashboards and the duplicate-request check look bookings up by these fields.
+bookingSchema.index({ customer: 1, provider: 1, status: 1 });
+bookingSchema.index({ provider: 1, createdAt: -1 });
 
 module.exports = mongoose.model("Booking", bookingSchema);

@@ -61,6 +61,7 @@ function AdminBookings() {
           <option value="accepted">Accepted</option>
           <option value="completed">Completed</option>
           <option value="rejected">Rejected</option>
+          <option value="cancelled">Cancelled</option>
         </select>
       </div>
       <div className="table-wrap">

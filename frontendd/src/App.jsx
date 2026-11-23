@@ -18,6 +18,7 @@ import Password from "./pages/account/Password";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminBookings from "./pages/admin/Bookings";
 import AdminReviews from "./pages/admin/Reviews";
+import AdminMessages from "./pages/admin/Messages";
 
 function App() {
   return (
@@ -47,6 +48,7 @@ function App() {
         <Route path="/admin/dashboard" element={<Navigate to="/admin" replace />} />
         <Route path="/admin/bookings" element={<AdminBookings />} />
         <Route path="/admin/reviews" element={<AdminReviews />} />
+        <Route path="/admin/messages" element={<AdminMessages />} />
 
         <Route path="*" element={<NotFound />} />
       </Route>

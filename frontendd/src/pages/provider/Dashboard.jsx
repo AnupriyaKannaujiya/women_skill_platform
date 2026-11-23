@@ -6,7 +6,7 @@ import { ConfirmModal, Empty, Loading, StatusBadge } from "../../components/ui";
 import { usePageTitle } from "../../lib/usePageTitle";
 import { formatDate, getError, phoneHref, skillList, unwrapUser } from "../../lib/format";
 
-const TABS = ["all", "pending", "accepted", "completed", "rejected"];
+const TABS = ["all", "pending", "accepted", "completed", "rejected", "cancelled"];
 
 function completion(user) {
   if (!user) return 0;

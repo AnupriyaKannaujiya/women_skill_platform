@@ -4,6 +4,7 @@ const { publicIdFromUrl, destroyImage } = require("../utils/cloudinaryHelpers");
 const { updateProviderRating } = require("../utils/rating");
 const Booking = require("../models/Booking");
 const Review = require("../models/Review");
+const ContactMessage = require("../models/ContactMessage");
 
 const getAllUsers = async (req, res) => {
   try {
@@ -97,7 +98,13 @@ const getDashboardStats = async (req, res) => {
       status: "completed",
     });
 
+    const rejectedBookings = await Booking.countDocuments({ status: "rejected" });
+
+    const cancelledBookings = await Booking.countDocuments({ status: "cancelled" });
+
     const totalReviews = await Review.countDocuments();
+
+    const unreadMessages = await ContactMessage.countDocuments({ isRead: false });
 
     res.status(200).json({
       success: true,
@@ -110,7 +117,10 @@ const getDashboardStats = async (req, res) => {
         pendingBookings,
         acceptedBookings,
         completedBookings,
+        rejectedBookings,
+        cancelledBookings,
         totalReviews,
+        unreadMessages,
       },
     });
   } catch (error) {

@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../../lib/api";
-import { Avatar, Empty, Loading, StatusBadge } from "../../components/ui";
+import { Avatar, ConfirmModal, Empty, Loading, StatusBadge } from "../../components/ui";
+import { useToast } from "../../context/ToastContext";
 import { usePageTitle } from "../../lib/usePageTitle";
 import { formatDate, getError, phoneHref, whatsappHref } from "../../lib/format";
 
-const TABS = ["all", "pending", "accepted", "completed", "rejected"];
+const TABS = ["all", "pending", "accepted", "completed", "rejected", "cancelled"];
 
 function CustomerDashboard() {
   usePageTitle("My bookings");
@@ -14,6 +15,12 @@ function CustomerDashboard() {
   const [bookings, setBookings] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [confirm, setConfirm] = useState(null);
+  const [busy, setBusy] = useState(false);
+  // Bumped after an action so the effect below reloads the list.
+  const [version, setVersion] = useState(0);
+  const [now] = useState(() => Date.now());
+  const toast = useToast();
 
   useEffect(() => {
     let cancelled = false;
@@ -32,9 +39,26 @@ function CustomerDashboard() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [version]);
+
+  const cancelBooking = async () => {
+    setBusy(true);
+    try {
+      const response = await api.put(`/bookings/${confirm._id}/cancel`);
+      toast(response.data.message || "Booking cancelled.", "ok");
+      setConfirm(null);
+      setVersion((value) => value + 1);
+    } catch (err) {
+      toast(getError(err), "error");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   if (loading) return <Loading label="Loading your bookings" />;
+
+  const canCancel = (booking) =>
+    ["pending", "accepted"].includes(booking.status) && new Date(booking.bookingDate).getTime() > now;
 
   const shown = filter === "all" ? bookings : bookings.filter((item) => item.status === filter);
 
@@ -129,14 +153,36 @@ function CustomerDashboard() {
                     <p className="muted">She could not take this booking.</p>
                     <Link className="btn btn-line btn-sm" to="/providers">Find someone else</Link>
                   </div>
+                ) : booking.status === "cancelled" ? (
+                  <p className="muted">You cancelled this request{booking.cancelledAt ? ` on ${formatDate(booking.cancelledAt)}` : ""}.</p>
                 ) : (
                   <p className="muted">Phone and WhatsApp open after she accepts.</p>
                 )}
+                {canCancel(booking) ? (
+                  <div className="cluster" style={{ marginTop: 10 }}>
+                    <button className="btn btn-line btn-sm" type="button" onClick={() => setConfirm(booking)}>
+                      Cancel booking
+                    </button>
+                  </div>
+                ) : null}
               </article>
             );
           })
         )}
       </div>
+
+      {confirm ? (
+        <ConfirmModal
+          title="Cancel this booking?"
+          text={`${confirm.provider?.name || "The provider"} will see that you cancelled the ${confirm.service} request for ${formatDate(confirm.bookingDate)}. This cannot be undone.`}
+          confirmLabel="Yes, cancel it"
+          cancelLabel="Keep booking"
+          danger
+          busy={busy}
+          onCancel={() => setConfirm(null)}
+          onConfirm={cancelBooking}
+        />
+      ) : null}
     </div>
   );
 }

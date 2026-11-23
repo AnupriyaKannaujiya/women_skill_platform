@@ -10,6 +10,11 @@ const {
   getAllReviews,
   deleteReview,
 } = require("../controllers/adminController");
+const {
+  getMessages,
+  setMessageRead,
+  deleteMessage,
+} = require("../controllers/contactController");
 
 const router = express.Router();
 
@@ -31,5 +36,11 @@ router.get("/bookings", authMiddleware, adminMiddleware, getAllBookings);
 router.get("/reviews", authMiddleware, adminMiddleware, getAllReviews);
 
 router.delete("/reviews/:id", authMiddleware, adminMiddleware, deleteReview);
+
+router.get("/messages", authMiddleware, adminMiddleware, getMessages);
+
+router.put("/messages/:id/read", authMiddleware, adminMiddleware, setMessageRead);
+
+router.delete("/messages/:id", authMiddleware, adminMiddleware, deleteMessage);
 
 module.exports = router;

@@ -6,6 +6,10 @@ const cloudinary = require("../config/cloudinary");
 const streamifier = require("streamifier");
 const { publicIdFromUrl, destroyImage } = require("../utils/cloudinaryHelpers");
 
+const normalizeEmail = (email) => String(email || "").trim().toLowerCase();
+// strength 2 = compare ignoring case.
+const EMAIL_COLLATION = { locale: "en", strength: 2 };
+
 // Accepts ["Mehndi", "Tailoring, Crafting"] or "Mehndi, Tailoring" and returns a clean array.
 const normalizeSkills = (skill) => {
   if (skill === undefined) return undefined;
@@ -24,7 +28,7 @@ const register = async (req, res) => {
   try {
     const {
       name,
-      email,
+      email: rawEmail,
       password,
       phone,
       whatsapp,
@@ -37,7 +41,9 @@ const register = async (req, res) => {
       role,
     } = req.body;
 
-    const existingUser = await User.findOne({ email });
+    const email = normalizeEmail(rawEmail);
+
+    const existingUser = await User.findOne({ email }).collation(EMAIL_COLLATION);
 
     if (existingUser) {
       return res.status(400).json({
@@ -90,9 +96,11 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { password } = req.body;
+    const email = normalizeEmail(req.body.email);
 
-    const user = await User.findOne({ email });
+    // Case-insensitive match, so accounts created before emails were lower-cased still work.
+    const user = await User.findOne({ email }).collation(EMAIL_COLLATION);
 
     // Same message for unknown email and wrong password, so the API
     // does not reveal which emails are registered.

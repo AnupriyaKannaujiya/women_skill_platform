@@ -51,6 +51,7 @@ function SideNav() {
       { to: "/admin", label: "Overview", end: true },
       { to: "/admin/bookings", label: "Bookings" },
       { to: "/admin/reviews", label: "Reviews" },
+      { to: "/admin/messages", label: "Messages" },
     );
   }
 

@@ -83,6 +83,7 @@ export function ConfirmModal({
   title,
   text,
   confirmLabel = "Confirm",
+  cancelLabel = "Cancel",
   danger = false,
   busy = false,
   onConfirm,
@@ -93,7 +94,7 @@ export function ConfirmModal({
       {text ? <p className="muted" style={{ marginBottom: 16 }}>{text}</p> : null}
       <div className="cluster" style={{ justifyContent: "flex-end" }}>
         <button className="btn btn-line" type="button" onClick={onCancel} disabled={busy}>
-          Cancel
+          {cancelLabel}
         </button>
         <button
           className={danger ? "btn btn-danger" : "btn btn-primary"}

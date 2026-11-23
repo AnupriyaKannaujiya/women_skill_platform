@@ -240,6 +240,7 @@ button.chip.active { background: var(--ink); color: white; }
 .badge-accepted, .badge-active, .badge-paid { background: #dceee4; color: var(--sage); }
 .badge-completed { background: #f3e1d6; color: var(--clay-deep); }
 .badge-rejected { background: #f8dcdc; color: var(--danger); }
+.badge-cancelled { background: #ece7e1; color: var(--muted); }
 
 .filters { display: grid; grid-template-columns: 280px 1fr; gap: 22px; align-items: start; }
 .filter-card { position: sticky; top: 90px; }

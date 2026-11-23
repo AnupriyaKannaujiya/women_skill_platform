@@ -11,6 +11,7 @@ const {
   getMyBookings,
   getProviderBookings,
   updateBookingStatus,
+  cancelBooking,
   getProviderDashboard,
   getCustomerDashboard,
 } = require("../controllers/bookingController");
@@ -22,11 +23,23 @@ router.post(
   [
     body("provider").notEmpty().withMessage("Provider is required"),
 
-    body("service").notEmpty().withMessage("Service is required"),
+    body("service")
+      .trim()
+      .notEmpty()
+      .withMessage("Service is required")
+      .isLength({ max: 100 })
+      .withMessage("Service is too long"),
 
     body("bookingDate").notEmpty().withMessage("Booking date is required"),
 
-    body("address").notEmpty().withMessage("Address is required"),
+    body("address")
+      .trim()
+      .notEmpty()
+      .withMessage("Address is required")
+      .isLength({ max: 300 })
+      .withMessage("Address is too long"),
+
+    body("message").optional().isLength({ max: 1000 }).withMessage("Message is too long"),
   ],
   validate,
   createBooking,
@@ -47,6 +60,8 @@ router.put(
   roleMiddleware("provider"),
   updateBookingStatus,
 );
+
+router.put("/:id/cancel", authMiddleware, roleMiddleware("customer"), cancelBooking);
 
 router.get(
   "/provider/dashboard",

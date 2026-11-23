@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import api from "../../lib/api";
 import { useToast } from "../../context/ToastContext";
-import { Loading, Modal, StatusBadge } from "../../components/ui";
+import { ConfirmModal, Loading, Modal, StatusBadge } from "../../components/ui";
 import { usePageTitle } from "../../lib/usePageTitle";
 import { getError } from "../../lib/format";
 
@@ -16,6 +17,7 @@ function AdminDashboard() {
   const [page, setPage] = useState(1);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(null);
+  const [blocking, setBlocking] = useState(null);
 
   const load = () =>
     Promise.allSettled([api.get("/admin/dashboard"), api.get("/admin/users")]).then(([statsRes, usersRes]) => {
@@ -93,6 +95,8 @@ function AdminDashboard() {
         ["Pending", stats.pendingBookings],
         ["Accepted", stats.acceptedBookings],
         ["Completed", stats.completedBookings],
+        ["Rejected", stats.rejectedBookings ?? 0],
+        ["Cancelled", stats.cancelledBookings ?? 0],
       ]
     : [];
   const maxBar = Math.max(...bars.map((item) => item[1]), 1);
@@ -102,6 +106,12 @@ function AdminDashboard() {
       <p className="eyebrow">Admin</p>
       <h1 className="section-title" style={{ margin: "8px 0 16px" }}>Overview</h1>
       {error ? <div className="note note-error">{error}</div> : null}
+      {stats?.unreadMessages ? (
+        <div className="note" style={{ marginBottom: 14 }}>
+          {stats.unreadMessages} new message{stats.unreadMessages === 1 ? "" : "s"} from the Contact page.{" "}
+          <Link to="/admin/messages">Open messages</Link>
+        </div>
+      ) : null}
       <div className="stat-grid">
         {cards.map(([label, value]) => (
           <article className="stat" key={label}>
@@ -170,7 +180,11 @@ function AdminDashboard() {
                     <td>
                       <div className="cluster">
                         {person.role !== "admin" ? (
-                          <button className="btn btn-line btn-sm" type="button" onClick={() => toggleBlock(person)}>
+                          <button
+                            className="btn btn-line btn-sm"
+                            type="button"
+                            onClick={() => (person.isBlocked ? toggleBlock(person) : setBlocking(person))}
+                          >
                             {person.isBlocked ? "Unblock" : "Block"}
                           </button>
                         ) : null}
@@ -206,6 +220,20 @@ function AdminDashboard() {
             <button className="btn btn-line" type="button" onClick={() => setPending(null)}>Cancel</button>
           </div>
         </Modal>
+      ) : null}
+      {blocking ? (
+        <ConfirmModal
+          title={`Block ${blocking.name}?`}
+          text="They are signed out straight away and cannot log in, book or appear in search until you unblock them."
+          confirmLabel="Block account"
+          danger
+          onCancel={() => setBlocking(null)}
+          onConfirm={async () => {
+            const person = blocking;
+            setBlocking(null);
+            await toggleBlock(person);
+          }}
+        />
       ) : null}
     </div>
   );
