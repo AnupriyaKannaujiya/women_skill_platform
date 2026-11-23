@@ -15,6 +15,7 @@ const emptyFilters = {
   maxPrice: "",
   experience: "",
   rating: "",
+  verified: "",
   sort: "",
 };
 
@@ -27,6 +28,7 @@ function readFilters(params) {
     maxPrice: params.get("maxPrice") || "",
     experience: params.get("experience") || "",
     rating: params.get("rating") || "",
+    verified: params.get("verified") === "true" ? "true" : "",
     sort: params.get("sort") || "",
   };
 }
@@ -167,6 +169,16 @@ function Providers() {
               <option value="4">4 and above</option>
               <option value="3">3 and above</option>
             </select>
+          </label>
+          <label className="check-field">
+            <input
+              type="checkbox"
+              checked={filters.verified === "true"}
+              onChange={(event) =>
+                setFilters((current) => ({ ...current, verified: event.target.checked ? "true" : "" }))
+              }
+            />
+            <span>Verified only <span className="verified-badge">✓</span></span>
           </label>
           <label className="field">
             <span>Sort</span>

@@ -128,6 +128,30 @@ function ProviderDashboard() {
         </div>
       </section>
 
+      {user && !user.isVerified ? (
+        <section className="card split" style={{ marginTop: 12 }}>
+          <div>
+            <strong>
+              {user.verification?.status === "pending"
+                ? "Your ID is being checked"
+                : user.verification?.status === "rejected"
+                  ? "Your ID check needs a new photo"
+                  : "Get the ✓ Verified badge"}
+            </strong>
+            <p className="muted">
+              {user.verification?.status === "pending"
+                ? "You will get an email when the team has looked at it."
+                : "Verified profiles earn more trust and show up in the “Verified only” search."}
+            </p>
+          </div>
+          {user.verification?.status !== "pending" ? (
+            <Link className="btn btn-sage btn-sm" to="/provider/verification">
+              {user.verification?.status === "rejected" ? "Upload again" : "Verify my ID"}
+            </Link>
+          ) : null}
+        </section>
+      ) : null}
+
       <h2 style={{ margin: "22px 0 12px" }}>Requests</h2>
       {overdue.length ? (
         <div className="note note-warn" role="status" style={{ marginBottom: 14 }}>

@@ -44,6 +44,7 @@ function SideNav() {
     links.unshift(
       { to: "/provider/dashboard", label: "Requests" },
       { to: "/provider/portfolio", label: "Portfolio" },
+      { to: "/provider/verification", label: "Verification" },
     );
   }
   if (user?.role === "admin") {
@@ -51,6 +52,7 @@ function SideNav() {
       { to: "/admin", label: "Overview", end: true },
       { to: "/admin/bookings", label: "Bookings" },
       { to: "/admin/reviews", label: "Reviews" },
+      { to: "/admin/verifications", label: "Verifications" },
       { to: "/admin/messages", label: "Messages" },
     );
   }

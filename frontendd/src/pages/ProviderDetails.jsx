@@ -146,6 +146,9 @@ function ProviderDetails() {
             <h1 className="section-title" style={{ fontSize: "2rem" }}>
               {provider.name}
             </h1>
+            {provider.isVerified ? (
+              <span className="verified-badge" title="ID checked by the Women Skill team">✓ Verified provider</span>
+            ) : null}
             <p className="muted">{[provider.area, provider.city].filter(Boolean).join(", ") || "Location not added"}</p>
             <Stars value={provider.rating || 0} />
             <p className="muted">

@@ -1,7 +1,9 @@
 const handleError = require("../utils/handleError");
 const User = require("../models/User");
+const cloudinary = require("../config/cloudinary");
 const { publicIdFromUrl, destroyImage } = require("../utils/cloudinaryHelpers");
 const { updateProviderRating } = require("../utils/rating");
+const { SELF_HIDDEN_FIELDS } = require("../utils/publicUser");
 const Booking = require("../models/Booking");
 const Review = require("../models/Review");
 const ContactMessage = require("../models/ContactMessage");
@@ -9,7 +11,7 @@ const { expireStalePendingBookings, overdueFilter } = require("../utils/bookingM
 
 const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().select("-password");
+    const users = await User.find().select(SELF_HIDDEN_FIELDS);
 
     res.status(200).json({
       success: true,
@@ -42,6 +44,14 @@ const deleteUser = async (req, res) => {
 
     for (const image of user.portfolio) {
       await destroyImage(image.public_id);
+    }
+
+    // A pending ID photo is stored privately and must not be left behind.
+    const idDocument = user.verification?.document?.public_id;
+    if (idDocument) {
+      await cloudinary.uploader
+        .destroy(idDocument, { type: "private", resource_type: "image" })
+        .catch((error) => console.error("Could not delete ID document:", error.message));
     }
 
     // Providers this user reviewed need their rating recalculated after the reviews go.
@@ -113,6 +123,13 @@ const getDashboardStats = async (req, res) => {
 
     const unreadMessages = await ContactMessage.countDocuments({ isRead: false });
 
+    const pendingVerifications = await User.countDocuments({
+      role: "provider",
+      "verification.status": "pending",
+    });
+
+    const verifiedProviders = await User.countDocuments({ role: "provider", isVerified: true });
+
     res.status(200).json({
       success: true,
       stats: {
@@ -130,6 +147,8 @@ const getDashboardStats = async (req, res) => {
         overdueBookings,
         totalReviews,
         unreadMessages,
+        pendingVerifications,
+        verifiedProviders,
       },
     });
   } catch (error) {
@@ -175,7 +194,7 @@ const getAllReviews = async (req, res) => {
 
 const toggleUserBlock = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).select("-password");
+    const user = await User.findById(req.params.id).select(SELF_HIDDEN_FIELDS);
 
     if (!user) {
       return res.status(404).json({

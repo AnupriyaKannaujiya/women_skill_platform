@@ -9,7 +9,14 @@ function ProviderCard({ provider }) {
       <div className="person">
         <Avatar name={provider.name} src={provider.photo} />
         <div>
-          <h3>{provider.name}</h3>
+          <h3>
+            {provider.name}
+            {provider.isVerified ? (
+              <span className="verified-badge" title="ID checked by the Women Skill team" style={{ marginLeft: 6 }}>
+                ✓ Verified
+              </span>
+            ) : null}
+          </h3>
           <p className="muted">{place || "City not added"}</p>
         </div>
       </div>

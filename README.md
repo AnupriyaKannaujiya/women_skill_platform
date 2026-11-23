@@ -48,13 +48,27 @@ Only a hash of the link's token is stored, and using it signs the account out ev
 - **Live server:** set `NODE_ENV=production` and `CLIENT_URL` to the real site address,
   so links point to it and a missing SMTP setup shows up as an error.
 
+## Provider verification
+
+Providers upload a photo of a government ID from **Verification** in their account.
+An admin reviews it under **Admin → Verifications** and approves or rejects it (with a reason).
+Approved providers get a **✓ Verified** badge and appear in the "Verified only" search filter.
+
+Privacy rules built in:
+- ID numbers are never asked for or stored; only the photo and the ID type.
+- The photo is uploaded to Cloudinary as a **private** asset (no public URL). Admins open
+  it through a signed link that expires after 10 minutes.
+- The photo is **deleted as soon as an admin decides**, when it is replaced, or when the
+  account is deleted. Only the status, ID type and dates are kept.
+- The provider gets an email with the outcome (uses the same SMTP settings as password reset).
+
 ## Roles
 
 | Role | Can do |
 |---|---|
 | Customer | Search, request a booking, cancel it, call/WhatsApp after acceptance, review after completion |
-| Provider | Profile, skills, price, portfolio photos; accept, reject, cancel and complete bookings |
-| Admin | Overview, block/delete users, all bookings, delete reviews, read Contact messages |
+| Provider | Profile, skills, price, portfolio photos, ID verification; accept, reject, cancel and complete bookings |
+| Admin | Overview, block/delete users, all bookings, delete reviews, read Contact messages, verify providers |
 
 Admins cannot sign up from the site. Promote an existing user in the database:
 
@@ -90,4 +104,5 @@ pending ──accept──► accepted ──complete (after booking date)──
 | Bookings | `POST /api/bookings`, `GET /api/bookings/my`, `GET /api/bookings/provider`, `PUT /api/bookings/:id/status`, `PUT /api/bookings/:id/cancel` |
 | Reviews | `POST /api/reviews`, `PUT/DELETE /api/reviews/:id`, `GET /api/reviews/:providerId` |
 | Contact | `POST /api/contact` |
-| Admin | `/api/admin/dashboard`, `/users`, `/bookings`, `/reviews`, `/messages` |
+| Verification | `GET /api/verification/me`, `POST /api/verification` (provider); `GET /api/admin/verifications`, `GET /api/admin/verifications/:id/document`, `PUT /api/admin/verifications/:id` (admin) |
+| Admin | `/api/admin/dashboard`, `/users`, `/bookings`, `/reviews`, `/messages`, `/verifications` |

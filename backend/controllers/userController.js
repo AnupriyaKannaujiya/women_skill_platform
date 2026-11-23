@@ -2,7 +2,7 @@ const handleError = require("../utils/handleError");
 const mongoose = require("mongoose");
 const User = require("../models/User");
 const Review = require("../models/Review");
-const { PUBLIC_HIDDEN_FIELDS } = require("../utils/publicUser");
+const { PUBLIC_HIDDEN_FIELDS, SELF_HIDDEN_FIELDS } = require("../utils/publicUser");
 
 // User input goes into a RegExp, so special characters must be escaped.
 const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -54,6 +54,8 @@ const searchUsers = async (req, res) => {
     const minRating = toNumber(rating);
     if (minRating !== undefined) filter.rating = { $gte: minRating };
 
+    if (req.query.verified === "true") filter.isVerified = true;
+
     const limit = clamp(Math.trunc(toNumber(req.query.limit) ?? 10), 1, 50);
     const page = Math.max(Math.trunc(toNumber(req.query.page) ?? 1), 1);
     const skip = (page - 1) * limit;
@@ -81,7 +83,7 @@ const searchUsers = async (req, res) => {
 
 const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find({ isBlocked: false }).select("-password");
+    const users = await User.find({ isBlocked: false }).select(SELF_HIDDEN_FIELDS);
 
     res.status(200).json({
       success: true,
@@ -135,7 +137,7 @@ const getUserById = async (req, res) => {
 
 const getMyProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).select("-password");
+    const user = await User.findById(req.user._id).select(SELF_HIDDEN_FIELDS);
 
     if (!user) {
       return res.status(404).json({

@@ -21,6 +21,8 @@ import AdminDashboard from "./pages/admin/Dashboard";
 import AdminBookings from "./pages/admin/Bookings";
 import AdminReviews from "./pages/admin/Reviews";
 import AdminMessages from "./pages/admin/Messages";
+import AdminVerifications from "./pages/admin/Verifications";
+import ProviderVerification from "./pages/provider/Verification";
 
 function App() {
   return (
@@ -53,6 +55,8 @@ function App() {
         <Route path="/admin/bookings" element={<AdminBookings />} />
         <Route path="/admin/reviews" element={<AdminReviews />} />
         <Route path="/admin/messages" element={<AdminMessages />} />
+        <Route path="/admin/verifications" element={<AdminVerifications />} />
+        <Route path="/provider/verification" element={<ProviderVerification />} />
 
         <Route path="*" element={<NotFound />} />
       </Route>

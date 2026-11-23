@@ -15,6 +15,11 @@ const {
   setMessageRead,
   deleteMessage,
 } = require("../controllers/contactController");
+const {
+  listVerifications,
+  getDocumentLink,
+  decideVerification,
+} = require("../controllers/verificationController");
 
 const router = express.Router();
 
@@ -42,5 +47,11 @@ router.get("/messages", authMiddleware, adminMiddleware, getMessages);
 router.put("/messages/:id/read", authMiddleware, adminMiddleware, setMessageRead);
 
 router.delete("/messages/:id", authMiddleware, adminMiddleware, deleteMessage);
+
+router.get("/verifications", authMiddleware, adminMiddleware, listVerifications);
+
+router.get("/verifications/:id/document", authMiddleware, adminMiddleware, getDocumentLink);
+
+router.put("/verifications/:id", authMiddleware, adminMiddleware, decideVerification);
 
 module.exports = router;

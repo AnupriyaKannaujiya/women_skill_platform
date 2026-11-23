@@ -15,6 +15,7 @@ const reviewRoutes = require("./routes/reviewRoutes");
 const bookingRoutes = require("./routes/bookingRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const contactRoutes = require("./routes/contactRoutes");
+const verificationRoutes = require("./routes/verificationRoutes");
 const errorHandler = require("./middleware/errorMiddleware");
 
 const missing = ["MONGO_URI", "JWT_SECRET", "CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET"]
@@ -86,6 +87,7 @@ app.use("/api/reviews", reviewRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/contact", contactRoutes);
+app.use("/api/verification", verificationRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

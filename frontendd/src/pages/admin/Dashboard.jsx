@@ -84,6 +84,7 @@ function AdminDashboard() {
     ? [
         ["People", stats.totalUsers],
         ["Providers", stats.totalProviders],
+        ["Verified", stats.verifiedProviders ?? 0],
         ["Customers", stats.totalCustomers],
         ["Bookings", stats.totalBookings],
         ["Reviews", stats.totalReviews],
@@ -111,6 +112,12 @@ function AdminDashboard() {
         <div className="note" style={{ marginBottom: 14 }}>
           {stats.unreadMessages} new message{stats.unreadMessages === 1 ? "" : "s"} from the Contact page.{" "}
           <Link to="/admin/messages">Open messages</Link>
+        </div>
+      ) : null}
+      {stats?.pendingVerifications ? (
+        <div className="note" style={{ marginBottom: 14 }}>
+          {stats.pendingVerifications} provider{stats.pendingVerifications === 1 ? " is" : "s are"} waiting for ID
+          verification. <Link to="/admin/verifications">Review now</Link>
         </div>
       ) : null}
       {stats?.overdueBookings ? (

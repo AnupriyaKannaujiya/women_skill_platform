@@ -111,6 +111,41 @@ const userSchema = new mongoose.Schema(
     passwordChangedAt: {
       type: Date,
     },
+
+    // Public flag shown as the "Verified" badge and used by the search filter.
+    isVerified: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+
+    // Provider ID check. Never sent on public endpoints.
+    verification: {
+      status: {
+        type: String,
+        enum: ["unverified", "pending", "verified", "rejected"],
+        default: "unverified",
+      },
+      idType: {
+        type: String,
+        enum: ["aadhaar", "pan", "voter", "driving", "passport", "other"],
+      },
+      // Private Cloudinary file; removed once an admin decides.
+      document: {
+        public_id: String,
+        format: String,
+      },
+      submittedAt: Date,
+      reviewedAt: Date,
+      reviewedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+      note: {
+        type: String,
+        maxlength: 300,
+      },
+    },
   },
   {
     timestamps: true,

@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 const cloudinary = require("../config/cloudinary");
 const streamifier = require("streamifier");
 const crypto = require("crypto");
+const { SELF_HIDDEN_FIELDS } = require("../utils/publicUser");
 const { publicIdFromUrl, destroyImage } = require("../utils/cloudinaryHelpers");
 const { sendMail } = require("../utils/mailer");
 
@@ -126,7 +127,7 @@ const login = async (req, res) => {
 
     const token = signToken(user._id);
 
-    const safeUser = await User.findById(user._id).select("-password");
+    const safeUser = await User.findById(user._id).select(SELF_HIDDEN_FIELDS);
 
     res.status(200).json({
       success: true,
@@ -141,7 +142,7 @@ const login = async (req, res) => {
 
 const profile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select("-password");
+    const user = await User.findById(req.user.id).select(SELF_HIDDEN_FIELDS);
 
     res.status(200).json(user);
   } catch (error) {
@@ -170,7 +171,7 @@ const updateProfile = async (req, res) => {
     const updatedUser = await User.findByIdAndUpdate(req.user.id, updateData, {
       new: true,
       runValidators: true,
-    }).select("-password");
+    }).select(SELF_HIDDEN_FIELDS);
 
     res.status(200).json({
       success: true,
@@ -219,7 +220,7 @@ const uploadProfilePhoto = async (req, res) => {
       {
         new: true,
       },
-    ).select("-password");
+    ).select(SELF_HIDDEN_FIELDS);
 
     // Delete the old photo only after the new one is saved.
     if (previousPhoto && previousPhoto !== result.secure_url) {
@@ -256,6 +257,7 @@ const removeProfilePhoto = async (req, res) => {
 
     const safeUser = user.toObject();
     delete safeUser.password;
+    if (safeUser.verification) delete safeUser.verification.document;
 
     res.status(200).json({
       success: true,
