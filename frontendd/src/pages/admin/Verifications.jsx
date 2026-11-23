@@ -81,9 +81,9 @@ function AdminVerifications() {
   return (
     <div>
       <p className="eyebrow">Admin</p>
-      <h1 className="section-title" style={{ margin: "8px 0 6px" }}>Provider verification</h1>
+      <h1 className="section-title" style={{ margin: "8px 0 6px" }}>ID verification</h1>
       <p className="muted" style={{ marginBottom: 14 }}>
-        Check that the ID matches the profile name and photo. ID photos are deleted once you decide.
+        Providers and customers. Check that the ID matches the account name (and photo for providers). ID photos are deleted once you decide.
       </p>
       {error ? <div className="note note-error">{error}</div> : null}
 
@@ -121,7 +121,12 @@ function AdminVerifications() {
                   <Avatar name={provider.name} src={provider.photo} />
                   <div>
                     <h3>
-                      <Link to={`/providers/${provider._id}`}>{provider.name}</Link>
+                      {provider.role === "provider" ? (
+                        <Link to={`/providers/${provider._id}`}>{provider.name}</Link>
+                      ) : (
+                        provider.name
+                      )}{" "}
+                      <span className="chip">{provider.role}</span>
                     </h3>
                     <p className="muted">{[provider.area, provider.city].filter(Boolean).join(", ") || "City not added"}</p>
                   </div>

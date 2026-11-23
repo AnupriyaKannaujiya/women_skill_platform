@@ -16,12 +16,12 @@ const uploadLimiter = rateLimit({
   message: { success: false, message: "Too many uploads. Please try again later." },
 });
 
-router.get("/me", authMiddleware, roleMiddleware("provider"), getMyVerification);
+router.get("/me", authMiddleware, roleMiddleware("provider", "customer"), getMyVerification);
 
 router.post(
   "/",
   authMiddleware,
-  roleMiddleware("provider"),
+  roleMiddleware("provider", "customer"),
   uploadLimiter,
   upload.single("document"),
   submitVerification,

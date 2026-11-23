@@ -1,6 +1,7 @@
 import { NavLink, Navigate, Outlet, useLocation } from "react-router-dom";
 import Header from "./Header";
 import Footer from "./Footer";
+import SosButton from "./SosButton";
 import { useAuth } from "../context/AuthContext";
 import { homeFor } from "../lib/format";
 
@@ -38,11 +39,15 @@ function SideNav() {
 
   if (user?.role === "customer") {
     links.unshift({ to: "/customer/dashboard", label: "My bookings" });
+    links.push({ to: "/account/verification", label: "ID verification" });
     links.push({ to: "/providers", label: "Find someone" });
   }
   if (user?.role === "provider") {
     links.unshift(
       { to: "/provider/dashboard", label: "Requests" },
+      { to: "/provider/availability", label: "Availability" },
+      { to: "/provider/services", label: "Services & prices" },
+      { to: "/provider/safety", label: "Safety & SOS" },
       { to: "/provider/portfolio", label: "Portfolio" },
       { to: "/provider/verification", label: "Verification" },
     );
@@ -52,6 +57,7 @@ function SideNav() {
       { to: "/admin", label: "Overview", end: true },
       { to: "/admin/bookings", label: "Bookings" },
       { to: "/admin/reviews", label: "Reviews" },
+      { to: "/admin/sos", label: "🚨 SOS alerts" },
       { to: "/admin/verifications", label: "Verifications" },
       { to: "/admin/messages", label: "Messages" },
     );
@@ -105,6 +111,7 @@ export function Frame() {
             <Outlet />
           </div>
         </div>
+        {user.role === "provider" ? <SosButton /> : null}
       </div>
     );
   }
@@ -116,6 +123,8 @@ export function Frame() {
         <Outlet />
       </main>
       {bare ? null : <Footer />}
+      {/* Providers keep the SOS button on every page, not only in their panel. */}
+      {token && user?.role === "provider" && !bare ? <SosButton /> : null}
     </div>
   );
 }

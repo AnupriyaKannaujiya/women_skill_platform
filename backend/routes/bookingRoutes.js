@@ -12,6 +12,8 @@ const {
   getProviderBookings,
   updateBookingStatus,
   cancelBooking,
+  checkIn,
+  checkOut,
   getProviderDashboard,
   getCustomerDashboard,
 } = require("../controllers/bookingController");
@@ -32,7 +34,9 @@ router.post(
 
     body("bookingDate").notEmpty().withMessage("Booking date is required"),
 
+    // No address is needed when the customer goes to her place.
     body("address")
+      .if(body("serviceMode").not().equals("at_provider"))
       .trim()
       .notEmpty()
       .withMessage("Address is required")
@@ -40,6 +44,11 @@ router.post(
       .withMessage("Address is too long"),
 
     body("message").optional().isLength({ max: 1000 }).withMessage("Message is too long"),
+
+    body("serviceMode")
+      .optional()
+      .isIn(["at_customer", "at_provider"])
+      .withMessage("Choose where the service will happen"),
   ],
   validate,
   createBooking,
@@ -62,6 +71,10 @@ router.put(
 );
 
 router.put("/:id/cancel", authMiddleware, roleMiddleware("customer"), cancelBooking);
+
+router.put("/:id/check-in", authMiddleware, roleMiddleware("provider"), checkIn);
+
+router.put("/:id/check-out", authMiddleware, roleMiddleware("provider"), checkOut);
 
 router.get(
   "/provider/dashboard",

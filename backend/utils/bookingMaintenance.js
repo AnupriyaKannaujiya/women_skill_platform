@@ -1,4 +1,5 @@
 const Booking = require("../models/Booking");
+const User = require("../models/User");
 const { notify, formatWhen } = require("./notify");
 
 // How often the background check runs while the server is up.
@@ -100,6 +101,61 @@ const sendUpcomingReminders = async () => {
   return sent;
 };
 
+// Safety: she checked in at a customer's home but did not check out an hour after the
+// booking should have ended. Ask her, and alert the admins, once.
+const SAFETY_GRACE_MS = 60 * 60 * 1000;
+const sendSafetyCheckAlerts = async () => {
+  const cutoff = new Date(Date.now() - SAFETY_GRACE_MS);
+  const late = await Booking.find({
+    status: "accepted",
+    serviceMode: "at_customer",
+    checkInAt: { $exists: true },
+    checkOutAt: { $exists: false },
+    safetyAlertAt: { $exists: false },
+    endDate: { $lt: cutoff },
+  })
+    .select("_id")
+    .limit(BATCH)
+    .lean();
+
+  let alerted = 0;
+  for (const { _id } of late) {
+    const booking = await Booking.findOneAndUpdate(
+      { _id, safetyAlertAt: { $exists: false } },
+      { $set: { safetyAlertAt: new Date() } },
+      { returnDocument: "after" },
+    )
+      .populate("customer", "name phone isVerified")
+      .populate("provider", "name phone");
+    if (!booking) continue;
+    alerted += 1;
+
+    notify({
+      to: booking.provider?._id,
+      type: "safety_check",
+      title: "Are you safe? Please check out",
+      body: `Your ${booking.service} booking was due to end at ${formatWhen(booking.endDate)} and you have not checked out. Tap "I've left safely", or press SOS if you need help.`,
+      link: "/provider/dashboard",
+      booking: booking._id,
+      forceEmail: true,
+    });
+
+    const admins = await User.find({ role: "admin", isBlocked: { $ne: true } }).select("_id");
+    for (const admin of admins) {
+      notify({
+        to: admin._id,
+        type: "safety_check",
+        title: `⚠️ ${booking.provider?.name || "A provider"} has not checked out`,
+        body: `She checked in at ${formatWhen(booking.checkInAt)} for ${booking.service} at ${booking.address} with ${booking.customer?.name || "a customer"}${booking.customer?.phone ? ` (${booking.customer.phone})` : ""}. The booking ended at ${formatWhen(booking.endDate)}. Please call her${booking.provider?.phone ? ` on ${booking.provider.phone}` : ""}.`,
+        link: "/admin/sos",
+        booking: booking._id,
+        forceEmail: true,
+      });
+    }
+  }
+  return alerted;
+};
+
 // Accepted work whose date has passed but was never marked completed or cancelled.
 const overdueFilter = (extra = {}) => ({
   ...extra,
@@ -112,6 +168,8 @@ const startBookingMaintenance = () => {
     try {
       const expired = await expireStalePendingBookings();
       const reminded = await sendUpcomingReminders();
+      const safety = await sendSafetyCheckAlerts();
+      if (safety) console.log(`Sent safety check alerts for ${safety} booking(s)`);
       if (expired) console.log(`Expired ${expired} unanswered booking request(s)`);
       if (reminded) console.log(`Sent reminders for ${reminded} upcoming booking(s)`);
     } catch (error) {
@@ -128,6 +186,7 @@ const startBookingMaintenance = () => {
 module.exports = {
   expireStalePendingBookings,
   sendUpcomingReminders,
+  sendSafetyCheckAlerts,
   overdueFilter,
   startBookingMaintenance,
 };

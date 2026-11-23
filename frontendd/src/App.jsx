@@ -23,6 +23,10 @@ import AdminReviews from "./pages/admin/Reviews";
 import AdminMessages from "./pages/admin/Messages";
 import AdminVerifications from "./pages/admin/Verifications";
 import ProviderVerification from "./pages/provider/Verification";
+import ProviderServices from "./pages/provider/Services";
+import ProviderAvailability from "./pages/provider/Availability";
+import ProviderSafety from "./pages/provider/Safety";
+import AdminSos from "./pages/admin/Sos";
 
 function App() {
   return (
@@ -57,6 +61,11 @@ function App() {
         <Route path="/admin/messages" element={<AdminMessages />} />
         <Route path="/admin/verifications" element={<AdminVerifications />} />
         <Route path="/provider/verification" element={<ProviderVerification />} />
+        <Route path="/account/verification" element={<ProviderVerification />} />
+        <Route path="/provider/services" element={<ProviderServices />} />
+        <Route path="/provider/availability" element={<ProviderAvailability />} />
+        <Route path="/provider/safety" element={<ProviderSafety />} />
+        <Route path="/admin/sos" element={<AdminSos />} />
 
         <Route path="*" element={<NotFound />} />
       </Route>

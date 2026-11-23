@@ -14,6 +14,71 @@ import {
   skillList,
   whatsappHref,
 } from "../lib/format";
+import { WEEKDAYS } from "../lib/calendar";
+
+// Where she works, packages, travel charges, overtime and working days.
+function ServicesSummary({ provider }) {
+  const modes = provider.serviceModes || { atCustomer: true, atProvider: false };
+  const packages = provider.packages || [];
+  const travel = provider.travel || {};
+  const slabs = [...(travel.slabs || [])].sort((a, b) => a.uptoKm - b.uptoKm);
+  const week = provider.workingHours || [];
+  const order = [1, 2, 3, 4, 5, 6, 0];
+
+  return (
+    <section className="card" style={{ marginBottom: 16 }}>
+      <h2>Services & prices</h2>
+      <div className="chip-row" style={{ margin: "10px 0" }}>
+        {modes.atCustomer !== false ? <span className="mode-tag">🏠 Comes to your place</span> : null}
+        {modes.atProvider ? <span className="mode-tag">📍 You can visit her place</span> : null}
+        {provider.requireVerifiedCustomers ? <span className="mode-tag">🛡️ Verified customers only</span> : null}
+      </div>
+
+      {packages.length ? (
+        <table className="mini-table">
+          <thead><tr><th>Package</th><th>Time</th><th>Price</th></tr></thead>
+          <tbody>
+            {packages.map((item) => (
+              <tr key={item._id}>
+                <td>{item.label}{item.overnight ? " 🌙" : ""}</td>
+                <td>{item.hours} h</td>
+                <td>{formatMoney(item.price)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p className="muted">Standard 2-hour visit at {formatMoney(provider.price)}.</p>
+      )}
+      {provider.overtimeRate ? (
+        <p className="help" style={{ marginTop: 6 }}>Overtime: {formatMoney(provider.overtimeRate)} per extra hour.</p>
+      ) : null}
+
+      {modes.atCustomer !== false && provider.distanceBasedTravel && (slabs.length || travel.perKmBeyond) ? (
+        <p className="help" style={{ marginTop: 8 }}>
+          🚗 Travel: {travel.freeKm ? `free up to ${travel.freeKm} km, ` : ""}
+          {slabs.map((slab) => `up to ${slab.uptoKm} km ${formatMoney(slab.charge)}`).join(", ")}
+          {travel.perKmBeyond ? `, then ${formatMoney(travel.perKmBeyond)}/km` : ""}
+          {travel.maxKm ? ` · travels up to ${travel.maxKm} km` : ""}. Your exact charge is shown when you book.
+        </p>
+      ) : null}
+
+      {week.length ? (
+        <div className="week-strip" aria-label="Working days">
+          {order.map((day) => {
+            const item = week.find((entry) => entry.day === day);
+            return (
+              <span key={day} className={item?.enabled ? "week-day on" : "week-day"} title={item?.enabled ? `${item.start}–${item.end}` : "Closed"}>
+                <strong>{WEEKDAYS[day]}</strong>
+                <span>{item?.enabled ? `${item.start}–${item.end}` : "Closed"}</span>
+              </span>
+            );
+          })}
+        </div>
+      ) : null}
+    </section>
+  );
+}
 
 function ProviderDetails() {
   const { id } = useParams();
@@ -190,6 +255,8 @@ function ProviderDetails() {
             <h2>About</h2>
             <p style={{ marginTop: 8 }}>{provider.description || "She has not written a description yet."}</p>
           </section>
+
+          <ServicesSummary provider={provider} />
 
           <section className="card" style={{ marginBottom: 16 }}>
             <h2>Portfolio</h2>

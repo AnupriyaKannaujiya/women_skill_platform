@@ -8,6 +8,7 @@ const Booking = require("../models/Booking");
 const Review = require("../models/Review");
 const ContactMessage = require("../models/ContactMessage");
 const Notification = require("../models/Notification");
+const SosAlert = require("../models/SosAlert");
 const { expireStalePendingBookings, overdueFilter } = require("../utils/bookingMaintenance");
 
 const getAllUsers = async (req, res) => {
@@ -127,11 +128,13 @@ const getDashboardStats = async (req, res) => {
     const unreadMessages = await ContactMessage.countDocuments({ isRead: false });
 
     const pendingVerifications = await User.countDocuments({
-      role: "provider",
+      role: { $in: ["provider", "customer"] },
       "verification.status": "pending",
     });
 
     const verifiedProviders = await User.countDocuments({ role: "provider", isVerified: true });
+
+    const activeSos = await SosAlert.countDocuments({ status: "active" });
 
     res.status(200).json({
       success: true,
@@ -152,6 +155,7 @@ const getDashboardStats = async (req, res) => {
         unreadMessages,
         pendingVerifications,
         verifiedProviders,
+        activeSos,
       },
     });
   } catch (error) {

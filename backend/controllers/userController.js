@@ -32,7 +32,7 @@ const searchUsers = async (req, res) => {
     const { skill, city, area, minPrice, maxPrice, experience, rating, sort } = req.query;
 
     const filter = {
-      isBlocked: false,
+      isBlocked: { $ne: true },
       role: "provider",
     };
 
@@ -83,7 +83,7 @@ const searchUsers = async (req, res) => {
 
 const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find({ isBlocked: false }).select(SELF_HIDDEN_FIELDS);
+    const users = await User.find({ isBlocked: { $ne: true } }).select(SELF_HIDDEN_FIELDS);
 
     res.status(200).json({
       success: true,
@@ -109,7 +109,7 @@ const getUserById = async (req, res) => {
     const user = await User.findOne({
       _id: req.params.id,
       role: "provider",
-      isBlocked: false,
+      isBlocked: { $ne: true },
     }).select(PUBLIC_HIDDEN_FIELDS);
 
     if (!user) {
@@ -125,9 +125,14 @@ const getUserById = async (req, res) => {
       .populate("reviewer", "name photo")
       .sort({ createdAt: -1 });
 
+    // Her base location stays private; the page only needs to know if travel is distance-based.
+    const distanceBasedTravel = Boolean(
+      await User.exists({ _id: req.params.id, "baseLocation.lat": { $exists: true } }),
+    );
+
     res.status(200).json({
       success: true,
-      user,
+      user: { ...user.toObject(), distanceBasedTravel },
       reviews,
     });
   } catch (error) {

@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../../lib/api";
 import { useToast } from "../../context/ToastContext";
-import { ConfirmModal, Empty, Loading, StatusBadge } from "../../components/ui";
+import { ConfirmModal, Empty, Loading, Modal, StatusBadge } from "../../components/ui";
+import BookingDetails from "../../components/BookingDetails";
 import { usePageTitle } from "../../lib/usePageTitle";
-import { formatDate, getError, isOverdue, phoneHref, skillList, unwrapUser } from "../../lib/format";
+import { formatDate, formatMoney, getError, isOverdue, phoneHref, skillList, unwrapUser } from "../../lib/format";
 
 const TABS = ["all", "pending", "accepted", "completed", "rejected", "cancelled", "expired"];
 
@@ -36,6 +37,8 @@ function ProviderDashboard() {
   const [busy, setBusy] = useState("");
   const [filter, setFilter] = useState("all");
   const [confirm, setConfirm] = useState(null);
+  const [completing, setCompleting] = useState(null);
+  const [overtime, setOvertime] = useState("0");
   // Read the clock once per visit; the backend re-checks the date on completion anyway.
   const [now] = useState(() => Date.now());
 
@@ -63,11 +66,24 @@ function ProviderDashboard() {
     };
   }, []);
 
-  const updateStatus = async (id, status) => {
+  const updateStatus = async (id, status, extra = {}) => {
     setBusy(id + status);
     try {
-      await api.put(`/bookings/${id}/status`, { status });
+      await api.put(`/bookings/${id}/status`, { status, ...extra });
       toast(`Booking ${status}.`, "ok");
+      await load();
+    } catch (err) {
+      toast(getError(err), "error");
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const checkInOut = async (id, action) => {
+    setBusy(id + action);
+    try {
+      const response = await api.put(`/bookings/${id}/${action}`);
+      toast(response.data.message, "ok");
       await load();
     } catch (err) {
       toast(getError(err), "error");
@@ -196,7 +212,14 @@ function ProviderDashboard() {
             <article className="booking" key={booking._id}>
               <div className="booking-head">
                 <div>
-                  <h3>{booking.customer?.name || "Customer"}</h3>
+                  <h3>
+                    {booking.customer?.name || "Customer"}{" "}
+                    {booking.customer?.isVerified ? (
+                      <span className="verified-badge">✓ Verified customer</span>
+                    ) : (
+                      <span className="chip" title="This customer has not verified their ID">ID not verified</span>
+                    )}
+                  </h3>
                   {tel ? (
                     <a className="muted" href={tel}>{booking.customer.phone}</a>
                   ) : (
@@ -205,12 +228,28 @@ function ProviderDashboard() {
                 </div>
                 <StatusBadge status={isOverdue(booking, now) ? "overdue" : booking.status} />
               </div>
-              <dl className="meta-grid">
-                <div><dt>Service</dt><dd>{booking.service}</dd></div>
-                <div><dt>When</dt><dd>{formatDate(booking.bookingDate)}</dd></div>
-                <div><dt>Address</dt><dd>{booking.address}</dd></div>
-                <div><dt>Note</dt><dd>{booking.message || "—"}</dd></div>
-              </dl>
+              <BookingDetails booking={booking} viewer="provider" />
+              {booking.status === "pending" && !booking.customer?.isVerified ? (
+                <p className="help" style={{ marginBottom: 8 }}>
+                  ⚠️ This customer has not verified their ID yet. You can still accept, or turn on "verified customers
+                  only" in Safety.
+                </p>
+              ) : null}
+              {booking.status === "accepted" && booking.serviceMode === "at_customer" ? (
+                <div className="cluster" style={{ marginBottom: 8 }}>
+                  {!booking.checkInAt ? (
+                    <button className="btn btn-line btn-sm" type="button" disabled={Boolean(busy)} onClick={() => checkInOut(booking._id, "check-in")}>
+                      📍 I've arrived
+                    </button>
+                  ) : !booking.checkOutAt ? (
+                    <button className="btn btn-sage btn-sm" type="button" disabled={Boolean(busy)} onClick={() => checkInOut(booking._id, "check-out")}>
+                      ✅ I've left safely
+                    </button>
+                  ) : (
+                    <span className="help">✅ Checked out safely</span>
+                  )}
+                </div>
+              ) : null}
               {booking.status === "pending" ? (
                 <div className="cluster">
                   <button className="btn btn-sage btn-sm" type="button" disabled={Boolean(busy)} onClick={() => updateStatus(booking._id, "accepted")}>
@@ -224,7 +263,7 @@ function ProviderDashboard() {
               {booking.status === "accepted" ? (
                 <div className="cluster">
                   {due ? (
-                    <button className="btn btn-primary btn-sm" type="button" disabled={Boolean(busy)} onClick={() => setConfirm({ booking, status: "completed" })}>
+                    <button className="btn btn-primary btn-sm" type="button" disabled={Boolean(busy)} onClick={() => { setOvertime("0"); setCompleting(booking); }}>
                       Mark completed
                     </button>
                   ) : (
@@ -248,6 +287,47 @@ function ProviderDashboard() {
           );
         })
       )}
+
+      {completing ? (
+        <Modal title="Mark this work completed?" onClose={() => setCompleting(null)}>
+          <form
+            onSubmit={async (event) => {
+              event.preventDefault();
+              await updateStatus(completing._id, "completed", { overtimeHours: Number(overtime) || 0 });
+              setCompleting(null);
+            }}
+          >
+            <p className="muted" style={{ marginBottom: 12 }}>
+              {completing.customer?.name || "The customer"} will be able to leave a review. This cannot be changed later.
+            </p>
+            <label className="field">
+              <span>Extra time beyond the {completing.package?.hours ? `${completing.package.hours}-hour package` : "package"}</span>
+              <select value={overtime} onChange={(e) => setOvertime(e.target.value)}>
+                {[0, 0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6].map((h) => (
+                  <option key={h} value={h}>{h === 0 ? "No overtime" : `${h} hour${h === 1 ? "" : "s"}`}</option>
+                ))}
+              </select>
+            </label>
+            <p className="price-line">
+              Final amount:{" "}
+              <strong>
+                {formatMoney(
+                  (completing.charges?.service || 0) +
+                    (completing.charges?.travel || 0) +
+                    Math.round((Number(overtime) || 0) * (user?.overtimeRate || 0)),
+                )}
+              </strong>
+              {Number(overtime) ? (
+                <span className="help"> (includes {formatMoney(Math.round(Number(overtime) * (user?.overtimeRate || 0)))} overtime at {formatMoney(user?.overtimeRate || 0)}/h)</span>
+              ) : null}
+            </p>
+            <div className="cluster" style={{ justifyContent: "flex-end", marginTop: 12 }}>
+              <button className="btn btn-line" type="button" onClick={() => setCompleting(null)}>Not yet</button>
+              <button className="btn btn-primary" type="submit" disabled={Boolean(busy)}>Mark completed</button>
+            </div>
+          </form>
+        </Modal>
+      ) : null}
 
       {confirm ? (
         <ConfirmModal

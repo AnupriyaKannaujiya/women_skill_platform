@@ -97,15 +97,20 @@ const listVerifications = async (req, res) => {
       ? req.query.status
       : "pending";
 
-    const providers = await User.find({ role: "provider", "verification.status": status })
-      .select("name email phone city area skill photo isVerified verification createdAt")
+    // ?role=provider|customer narrows the list; default shows both.
+    const roleFilter = ["provider", "customer"].includes(req.query.role)
+      ? req.query.role
+      : { $in: ["provider", "customer"] };
+
+    const providers = await User.find({ role: roleFilter, "verification.status": status })
+      .select("name email phone role city area skill photo isVerified verification createdAt")
       .populate("verification.reviewedBy", "name")
       .sort({ "verification.submittedAt": status === "pending" ? 1 : -1 })
       .lean();
 
     const counts = {};
     for (const key of ["pending", "verified", "rejected"]) {
-      counts[key] = await User.countDocuments({ role: "provider", "verification.status": key });
+      counts[key] = await User.countDocuments({ role: roleFilter, "verification.status": key });
     }
 
     // Replace the document location with a simple yes/no.
@@ -124,13 +129,13 @@ const listVerifications = async (req, res) => {
 const getDocumentLink = async (req, res) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) {
-      return res.status(404).json({ success: false, message: "Provider not found" });
+      return res.status(404).json({ success: false, message: "User not found" });
     }
 
     const user = await User.findById(req.params.id).select("verification role");
     const document = user?.verification?.document;
 
-    if (!user || user.role !== "provider" || !document?.public_id) {
+    if (!user || !["provider", "customer"].includes(user.role) || !document?.public_id) {
       return res.status(404).json({ success: false, message: "No ID document on file" });
     }
 
@@ -165,13 +170,13 @@ const decideVerification = async (req, res) => {
     }
 
     if (!mongoose.isValidObjectId(req.params.id)) {
-      return res.status(404).json({ success: false, message: "Provider not found" });
+      return res.status(404).json({ success: false, message: "User not found" });
     }
 
     const user = await User.findById(req.params.id);
 
-    if (!user || user.role !== "provider") {
-      return res.status(404).json({ success: false, message: "Provider not found" });
+    if (!user || !["provider", "customer"].includes(user.role)) {
+      return res.status(404).json({ success: false, message: "User not found" });
     }
 
     if (user.verification?.status !== "pending") {
@@ -192,23 +197,27 @@ const decideVerification = async (req, res) => {
 
     await destroyPrivate(documentId);
 
-    // Tell her the outcome. Email problems must not undo the decision.
     // Bell + email. The ID-check result is important, so it is emailed even if
-    // she turned off booking emails.
+    // they turned off booking emails.
+    const isProvider = user.role === "provider";
     notify({
       to: user,
       type: approved ? "verification_approved" : "verification_rejected",
-      title: approved ? "Your Women Skill profile is verified" : "About your Women Skill ID check",
+      title: approved
+        ? `Your Women Skill ${isProvider ? "profile" : "account"} is verified`
+        : "About your Women Skill ID check",
       body: approved
-        ? "Good news: your ID was checked and customers now see the ✓ Verified badge next to your name."
+        ? isProvider
+          ? "Good news: your ID was checked and customers now see the ✓ Verified badge next to your name."
+          : "Good news: your ID was checked. Providers now see you as a ✓ verified customer, and you can book those who only accept verified customers."
         : `We could not verify your ID this time. Reason: ${note}. You can upload a new photo from the Verification page.`,
-      link: "/provider/verification",
+      link: isProvider ? "/provider/verification" : "/account/verification",
       forceEmail: true,
     });
 
     res.status(200).json({
       success: true,
-      message: approved ? "Provider verified" : "Verification rejected",
+      message: approved ? `${user.role === "customer" ? "Customer" : "Provider"} verified` : "Verification rejected",
     });
   } catch (error) {
     handleError(res, error);

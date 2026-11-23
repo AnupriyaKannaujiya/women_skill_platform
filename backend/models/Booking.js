@@ -19,15 +19,63 @@ const bookingSchema = new mongoose.Schema(
       required: true,
     },
 
+    // Start time.
     bookingDate: {
       type: Date,
       required: true,
     },
 
+    // Start + package hours; used for the calendar and safety check-out alerts.
+    endDate: {
+      type: Date,
+    },
+
+    // at_customer = she goes to the customer; at_provider = customer comes to her.
+    serviceMode: {
+      type: String,
+      enum: ["at_customer", "at_provider"],
+      default: "at_customer",
+    },
+
+    // Copy of the package at booking time, so later price edits do not change it.
+    package: {
+      label: String,
+      hours: Number,
+      price: Number,
+      overnight: Boolean,
+    },
+
+    // Customer's address for at_customer visits ("At her place" for at_provider).
     address: {
       type: String,
       required: true,
     },
+
+    customerLocation: {
+      lat: Number,
+      lng: Number,
+    },
+
+    distanceKm: {
+      type: Number,
+    },
+
+    charges: {
+      service: { type: Number, default: 0 },
+      travel: { type: Number, default: 0 },
+      overtime: { type: Number, default: 0 },
+      total: { type: Number, default: 0 },
+    },
+
+    overtimeHours: {
+      type: Number,
+      default: 0,
+    },
+
+    // Safety: she taps "I've arrived" and "I've left safely" on home visits.
+    checkInAt: Date,
+    checkOutAt: Date,
+    safetyAlertAt: Date,
 
     message: {
       type: String,

@@ -418,3 +418,94 @@ th { font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; colo
 @media (max-width: 760px) {
   .bell-panel { position: fixed; left: 16px; right: 16px; top: 74px; width: auto; }
 }
+
+/* ---------- Booking form ---------- */
+.step-block { border: 0; padding: 0; margin: 0 0 18px; }
+.step-block legend { font-weight: 700; margin-bottom: 8px; }
+.step-block select, .step-block input:not([type="radio"]):not([type="checkbox"]), .step-block textarea {
+  width: 100%; border: 1px solid var(--line); background: white; border-radius: 12px; padding: 12px 14px;
+}
+.step-block textarea { min-height: 80px; resize: vertical; }
+.choice-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+.choice {
+  position: relative; display: grid; gap: 2px; padding: 12px 14px; border: 1.5px solid var(--line);
+  border-radius: 14px; background: white; cursor: pointer;
+}
+.choice input { position: absolute; opacity: 0; pointer-events: none; }
+.choice.selected { border-color: var(--clay); background: #fdf6f1; box-shadow: 0 0 0 3px rgba(156,66,36,0.12); }
+.choice:focus-within { outline: 2px solid var(--clay); outline-offset: 2px; }
+.choice-title { font-weight: 700; }
+.day-strip { display: grid; grid-auto-flow: column; grid-auto-columns: 96px; gap: 8px; overflow-x: auto; padding-bottom: 6px; }
+.day-pill {
+  display: grid; gap: 2px; padding: 10px 8px; border-radius: 12px; border: 1.5px solid var(--line);
+  background: white; cursor: pointer; text-align: center; font-weight: 600; font-size: 0.86rem;
+}
+.day-pill.selected { border-color: var(--clay); background: var(--clay); color: white; }
+.day-pill.selected .help { color: rgba(255,255,255,0.85); }
+.day-pill.disabled { opacity: 0.45; cursor: not-allowed; background: var(--sand); }
+.price-box { border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; background: #fffdfa; }
+.price-box dl { margin: 8px 0; display: grid; gap: 6px; }
+.price-box dl > div { display: flex; justify-content: space-between; gap: 12px; }
+.price-box dd { margin: 0; font-weight: 600; }
+.price-box .total { border-top: 1px dashed var(--line); padding-top: 8px; font-size: 1.1rem; }
+.price-box .total dd { font-family: var(--serif); font-size: 1.3rem; }
+
+/* ---------- Provider settings ---------- */
+.slab-row, .package-row, .hours-row, .contact-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.slab-row input { width: 90px; }
+.package-row input:first-child { flex: 1 1 180px; }
+.package-row input[type="number"] { width: 100px; }
+.contact-row input { flex: 1 1 140px; }
+.slab-row input, .package-row input:not([type="checkbox"]), .hours-row input, .contact-row input {
+  border: 1px solid var(--line); background: white; border-radius: 10px; padding: 9px 10px;
+}
+.hours-row { padding: 6px 0; border-bottom: 1px solid var(--line); }
+
+/* ---------- Month calendar ---------- */
+.month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.month-head { font-size: 0.78rem; font-weight: 700; color: var(--muted); text-align: center; padding: 4px 0; }
+.month-cell {
+  min-height: 78px; border: 1px solid var(--line); border-radius: 10px; padding: 4px; text-align: left;
+  display: flex; flex-direction: column; gap: 2px; background: white; cursor: pointer; overflow: hidden;
+}
+.month-cell.blank { border: 0; background: transparent; cursor: default; }
+.month-cell.off { background: #f3eee7; }
+.month-cell.blocked { background: #fbe9e4; border-color: #efc7b9; }
+.month-cell.past { opacity: 0.45; cursor: default; }
+.month-cell.today { box-shadow: inset 0 0 0 2px var(--clay); }
+.month-num { font-weight: 700; font-size: 0.85rem; }
+.month-tag { font-size: 0.7rem; font-weight: 700; color: var(--danger); }
+.month-booking { font-size: 0.68rem; line-height: 1.2; padding: 2px 4px; border-radius: 6px; background: #dceee4; color: var(--sage); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.month-booking.status-pending { background: #f4e4c4; color: var(--warn); }
+.month-booking.status-completed { background: #f3e1d6; color: var(--clay-deep); }
+.legend { font-size: 0.82rem; color: var(--muted); }
+.legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: middle; border: 1px solid var(--line); }
+.legend .dot.open { background: white; } .legend .dot.off { background: #f3eee7; }
+.legend .dot.blocked { background: #fbe9e4; } .legend .dot.booked { background: #dceee4; }
+@media (max-width: 640px) { .month-cell { min-height: 56px; } .month-booking { display: none; } }
+
+/* ---------- SOS ---------- */
+.sos-fab {
+  position: fixed; right: 18px; bottom: 18px; z-index: 65; width: 64px; height: 64px; border-radius: 50%;
+  border: 3px solid white; background: #c62828; color: white; font-weight: 800; letter-spacing: 1px;
+  box-shadow: 0 8px 24px rgba(198,40,40,0.45); cursor: pointer;
+}
+.sos-fab:hover { background: #b71c1c; }
+.sos-fab:focus-visible { outline: 3px solid #ffcdd2; outline-offset: 3px; }
+.sos-contacts { display: grid; gap: 8px; }
+.sos-contact { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 10px; border: 1px solid var(--line); border-radius: 12px; }
+.toasts { bottom: 96px; }
+.badge-overdue, .badge-sos { background: #fbe3c4; color: #8a4b08; }
+.mode-tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; background: var(--sand); font-size: 0.78rem; font-weight: 600; }
+.sos-card { border: 2px solid #e57373; background: #fff6f6; }
+.mini-table { width: 100%; min-width: 0; border-collapse: collapse; margin-top: 6px; }
+.mini-table th, .mini-table td { padding: 8px 6px; border-bottom: 1px solid var(--line); text-align: left; }
+.week-strip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 12px; }
+.week-day { display: grid; gap: 2px; text-align: center; padding: 6px 2px; border-radius: 10px; background: #f3eee7; color: var(--muted); font-size: 0.72rem; }
+.week-day.on { background: #dceee4; color: var(--sage); }
+@media (max-width: 640px) { .week-day span { display: none; } }
+/* Grid children default to min-width:auto, which let the date strip widen the whole page. */
+.side-main, .booking-form, .step-block { min-width: 0; }
+.package-head { margin-bottom: 2px; font-size: 0.78rem; font-weight: 700; color: var(--muted); }
+.package-head span:first-child { flex: 1 1 180px; }
+.package-head span:not(:first-child) { width: 100px; }

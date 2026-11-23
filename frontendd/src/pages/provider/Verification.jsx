@@ -22,6 +22,7 @@ function Verification() {
   usePageTitle("Verification");
   const toast = useToast();
   const { user, updateUser } = useAuth();
+  const isCustomer = user?.role === "customer";
   const [info, setInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [idType, setIdType] = useState("aadhaar");
@@ -112,19 +113,28 @@ function Verification() {
 
   return (
     <div style={{ maxWidth: 720 }}>
-      <p className="eyebrow">Provider</p>
+      <p className="eyebrow">{isCustomer ? "Customer" : "Provider"}</p>
       <h1 className="section-title" style={{ margin: "8px 0 8px" }}>Get verified</h1>
-      <p className="muted" style={{ marginBottom: 16 }}>
-        Customers trust a profile more when the Women Skill team has checked her ID. Verified profiles show a
-        <span className="verified-badge" style={{ margin: "0 6px" }}>✓ Verified</span>
-        badge and appear in the "Verified only" search.
-      </p>
+      {isCustomer ? (
+        <p className="muted" style={{ marginBottom: 16 }}>
+          Women on Women Skill often work inside customers' homes. A checked ID tells them you are a genuine customer:
+          your requests show a <span className="verified-badge" style={{ margin: "0 4px" }}>✓ Verified customer</span>
+          badge, and you can book providers who only accept verified customers.
+        </p>
+      ) : (
+        <p className="muted" style={{ marginBottom: 16 }}>
+          Customers trust a profile more when the Women Skill team has checked her ID. Verified profiles show a
+          <span className="verified-badge" style={{ margin: "0 6px" }}>✓ Verified</span>
+          badge and appear in the "Verified only" search.
+        </p>
+      )}
 
       {status === "verified" ? (
         <section className="card" role="status">
           <h2>✓ You are verified</h2>
           <p className="muted" style={{ marginTop: 6 }}>
-            Verified on {formatDate(info.reviewedAt)}. The badge now shows on your profile and in search.
+            Verified on {formatDate(info.reviewedAt)}.{" "}
+            {isCustomer ? "Providers now see you as a verified customer." : "The badge now shows on your profile and in search."}
           </p>
         </section>
       ) : null}

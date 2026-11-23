@@ -114,6 +114,12 @@ function AdminDashboard() {
           <Link to="/admin/messages">Open messages</Link>
         </div>
       ) : null}
+      {stats?.activeSos ? (
+        <div className="note note-error" role="alert" style={{ marginBottom: 14 }}>
+          <strong>🚨 {stats.activeSos} active SOS alert{stats.activeSos === 1 ? "" : "s"}.</strong>{" "}
+          <Link to="/admin/sos">Open now</Link>
+        </div>
+      ) : null}
       {stats?.pendingVerifications ? (
         <div className="note" style={{ marginBottom: 14 }}>
           {stats.pendingVerifications} provider{stats.pendingVerifications === 1 ? " is" : "s are"} waiting for ID

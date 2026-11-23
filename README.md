@@ -61,6 +61,45 @@ Privacy rules built in:
 - The photo is **deleted as soon as an admin decides**, when it is replaced, or when the
   account is deleted. Only the status, ID type and dates are kept.
 - The provider gets an email with the outcome (uses the same SMTP settings as password reset).
+- **Customers can verify their ID too** (Account → ID verification). Providers see
+  "✓ Verified customer" on requests and can choose to accept verified customers only.
+
+## Where, how long and how much
+
+Providers set this under **Services & prices**; customers see it on the profile and pick it
+when booking.
+
+- **Where:** "I go to the customer's place" and/or "Customers come to my place". For visits to
+  her place, her address is shown to the customer only after she accepts.
+- **Travel charge** (home visits): distance from her private base location to the customer's
+  shared location (straight line, rounded to 0.5 km). Free up to X km, then slabs such as
+  *up to 5 km ₹50, up to 10 km ₹100*, then ₹/km beyond, with an optional maximum distance.
+  The price is worked out on the server, so her exact location is never sent to anyone.
+- **Packages by time:** e.g. 2 hours ₹500, 5 hours ₹1,100, Overnight (12 h) ₹2,500.
+  Every booking stores a start and end time and a copy of the package and price.
+- **Overtime:** a per-hour rate; when she marks the work completed she enters the extra time,
+  and the final amount (service + travel + overtime) is shown to both sides.
+
+## Availability calendar
+
+Under **Availability** a provider sets weekly working hours per day and marks days off on a
+month calendar that also shows her bookings. Customers pick from a 30-day strip that only offers
+open days and start times where the chosen package fits her hours (overnight packages may run
+past closing) and does not overlap another pending/accepted booking. The server checks the
+same rules, so two customers cannot take the same slot.
+
+## Safety
+
+- Customers must have a phone number on their account to book.
+- **Check-in / check-out** on home visits ("I've arrived" / "I've left safely"). If she has not
+  checked out an hour after the booking ends, she and the admins are alerted (once).
+- **SOS button** on every provider page (two taps). It records her live location and the
+  booking she is on, then alerts: all admins (bell + email), her emergency contacts (email, plus
+  one-tap Call / WhatsApp / SMS links on her phone) and providers who opted in and are based
+  within 5 km. The dialog also offers a direct 112 call. She or an admin closes the alert, and
+  everyone is told she is safe. Admins see live alerts under **Admin → SOS alerts**.
+- Automatic SMS/WhatsApp delivery needs a paid gateway (e.g. MSG91, WhatsApp Cloud API) and is
+  not wired in; email and in-app alerts work today.
 
 ## Notifications
 
@@ -124,6 +163,8 @@ pending ──accept──► accepted ──complete (after booking date)──
 | Bookings | `POST /api/bookings`, `GET /api/bookings/my`, `GET /api/bookings/provider`, `PUT /api/bookings/:id/status`, `PUT /api/bookings/:id/cancel` |
 | Reviews | `POST /api/reviews`, `PUT/DELETE /api/reviews/:id`, `GET /api/reviews/:providerId` |
 | Contact | `POST /api/contact` |
+| Provider settings | `GET/PUT /api/providers/settings` (provider); `GET /api/providers/:id/availability`, `POST /api/providers/:id/quote` (public) |
+| Safety | `POST /api/sos`, `GET /api/sos/mine`, `PUT /api/sos/:id/resolve`, `GET /api/sos/admin`; `PUT /api/bookings/:id/check-in`, `PUT /api/bookings/:id/check-out` |
 | Notifications | `GET /api/notifications`, `GET /api/notifications/unread-count`, `PUT /api/notifications/:id/read`, `PUT /api/notifications/read-all` |
 | Verification | `GET /api/verification/me`, `POST /api/verification` (provider); `GET /api/admin/verifications`, `GET /api/admin/verifications/:id/document`, `PUT /api/admin/verifications/:id` (admin) |
 | Admin | `/api/admin/dashboard`, `/users`, `/bookings`, `/reviews`, `/messages`, `/verifications` |

@@ -5,6 +5,12 @@ const Review = require("../models/Review");
 const mongoose = require("mongoose");
 const { expireStalePendingBookings, overdueFilter } = require("../utils/bookingMaintenance");
 const { notify, formatWhen } = require("../utils/notify");
+const { quote, isLocation } = require("../utils/pricing");
+const { checkSlot } = require("../utils/availability");
+
+const HOUR_MS = 60 * 60 * 1000;
+// She can check in from an hour before the start time.
+const CHECK_IN_EARLY_MS = HOUR_MS;
 
 // Which status a provider may move a booking to from its current status.
 // Anything not listed here (e.g. pending -> completed, completed -> rejected) is refused.
@@ -86,12 +92,63 @@ const createBooking = async (req, res) => {
       });
     }
 
+    // Safety: she knows who she is dealing with.
+    if (!String(req.user.phone || "").trim()) {
+      return res.status(400).json({
+        success: false,
+        code: "PHONE_REQUIRED",
+        message: "Add your phone number in your profile before booking, so she can reach you.",
+      });
+    }
+    if (providerUser.requireVerifiedCustomers && !req.user.isVerified) {
+      return res.status(403).json({
+        success: false,
+        code: "VERIFICATION_REQUIRED",
+        message: "She only accepts bookings from customers with a verified ID. Verify your ID from your account, then book again.",
+      });
+    }
+
+    // Where, which package and what it costs (worked out on the server).
+    const serviceMode = req.body.serviceMode || "at_customer";
+    const priced = quote(providerUser, {
+      serviceMode,
+      packageId: req.body.packageId || "standard",
+      location: req.body.location,
+    });
+    if (priced.error) {
+      return res.status(400).json({ success: false, message: priced.error });
+    }
+
+    if (serviceMode === "at_customer" && !String(address || "").trim()) {
+      return res.status(400).json({ success: false, message: "Add the address where she should come" });
+    }
+
+    // The time must fit her working hours, days off and other bookings.
+    const hours = Number(priced.pkg.hours) || 2;
+    const slotError = await checkSlot(providerUser, when, hours, Boolean(priced.pkg.overnight));
+    if (slotError) {
+      return res.status(409).json({ success: false, code: "SLOT_UNAVAILABLE", message: slotError });
+    }
+
     const booking = await Booking.create({
       customer: req.user.id,
       provider,
       service: String(service).trim(),
       bookingDate: when,
-      address: String(address).trim(),
+      endDate: new Date(when.getTime() + hours * 60 * 60 * 1000),
+      serviceMode,
+      package: {
+        label: priced.pkg.label,
+        hours,
+        price: priced.pkg.price,
+        overnight: Boolean(priced.pkg.overnight),
+      },
+      address: serviceMode === "at_customer" ? String(address).trim() : "At her place",
+      customerLocation: serviceMode === "at_customer" && isLocation(req.body.location)
+        ? { lat: Number(req.body.location.lat), lng: Number(req.body.location.lng) }
+        : undefined,
+      distanceKm: priced.distanceKm ?? undefined,
+      charges: priced.charges,
       message: message ? String(message).trim() : undefined,
     });
 
@@ -100,7 +157,7 @@ const createBooking = async (req, res) => {
       to: providerUser,
       type: "booking_new",
       title: `New booking request from ${req.user.name}`,
-      body: `${req.user.name} wants ${booking.service} on ${formatWhen(booking.bookingDate)}. Accept or decline it before that time, or it will expire.`,
+      body: `${req.user.name}${req.user.isVerified ? " (✓ verified customer)" : " (ID not verified)"} wants ${booking.service} — ${booking.package.label}, ${serviceMode === "at_customer" ? `at their place${booking.distanceKm !== undefined ? ` about ${booking.distanceKm} km away` : ""}` : "at your place"} — on ${formatWhen(booking.bookingDate)}. Total ₹${booking.charges.total}. Accept or decline it before that time, or it will expire.`,
       link: "/provider/dashboard",
       booking: booking._id,
     });
@@ -122,17 +179,21 @@ const getMyBookings = async (req, res) => {
     const bookings = await Booking.find({
       customer: req.user.id,
     })
-      .populate("provider", "name city phone whatsapp photo")
+      .populate("provider", "name city phone whatsapp photo providerAddress isVerified")
       .sort({ createdAt: -1 })
       .lean();
 
-    // The provider's phone/WhatsApp is shared only once she has accepted the request.
-    // Populated providers can be the same object across bookings, so copy before trimming.
+    // Her phone, WhatsApp and (for visits to her place) address are shared only once she
+    // has accepted. Populated providers can be the same object across bookings, so copy.
     for (const booking of bookings) {
-      if (booking.provider && !["accepted", "completed"].includes(booking.status)) {
-        const { phone, whatsapp, ...rest } = booking.provider; // eslint-disable-line no-unused-vars
-        booking.provider = rest;
-      }
+      if (!booking.provider) continue;
+      const shared = ["accepted", "completed"].includes(booking.status);
+      const { phone, whatsapp, providerAddress, ...rest } = booking.provider;
+      booking.provider = {
+        ...rest,
+        ...(shared ? { phone, whatsapp } : {}),
+        ...(shared && booking.serviceMode === "at_provider" ? { providerAddress } : {}),
+      };
     }
 
     res.status(200).json({
@@ -152,7 +213,7 @@ const getProviderBookings = async (req, res) => {
     const bookings = await Booking.find({
       provider: req.user.id,
     })
-      .populate("customer", "name phone whatsapp")
+      .populate("customer", "name phone whatsapp isVerified")
       .sort({ createdAt: -1 });
 
     res.status(200).json({
@@ -211,6 +272,28 @@ const updateBookingStatus = async (req, res) => {
       });
     }
 
+    if (status === "completed") {
+      // Extra time beyond the package, charged at her overtime rate.
+      const overtimeHours = Number(req.body.overtimeHours) || 0;
+      if (overtimeHours < 0 || overtimeHours > 12 || (overtimeHours * 2) % 1 !== 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Overtime must be between 0 and 12 hours, in half hours",
+        });
+      }
+      const rate = Number(req.user.overtimeRate) || 0;
+      const base = booking.charges?.total ? booking.charges : { service: 0, travel: 0 };
+      booking.overtimeHours = overtimeHours;
+      booking.charges = {
+        service: base.service || 0,
+        travel: base.travel || 0,
+        overtime: Math.round(overtimeHours * rate),
+        total: (base.service || 0) + (base.travel || 0) + Math.round(overtimeHours * rate),
+      };
+      // Finishing the job also counts as leaving safely.
+      if (booking.checkInAt && !booking.checkOutAt) booking.checkOutAt = new Date();
+    }
+
     booking.status = status;
 
     if (status === "cancelled") {
@@ -234,7 +317,7 @@ const updateBookingStatus = async (req, res) => {
       },
       completed: {
         title: `How was ${booking.service} with ${providerName}?`,
-        body: `${providerName} marked your ${booking.service} booking as completed. Please leave a review — it helps other customers.`,
+        body: `${providerName} marked your ${booking.service} booking as completed.${booking.charges?.total ? ` Final amount: ₹${booking.charges.total}${booking.overtimeHours ? ` (includes ${booking.overtimeHours} h overtime, ₹${booking.charges.overtime})` : ""}.` : ""} Please leave a review — it helps other customers.`,
       },
       cancelled: {
         title: `${providerName} cancelled your booking`,
@@ -400,12 +483,52 @@ const cancelBooking = async (req, res) => {
   }
 };
 
+// Safety on home visits: "I've arrived" and "I've left safely".
+const checkInOut = (kind) => async (req, res) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(404).json({ success: false, message: "Booking not found" });
+    }
+    const booking = await Booking.findOne({ _id: req.params.id, provider: req.user._id }).populate(
+      "customer",
+      "name",
+    );
+    if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+    if (booking.status !== "accepted") {
+      return res.status(400).json({ success: false, message: "Only accepted bookings can be checked in or out" });
+    }
+
+    if (kind === "in") {
+      if (booking.checkInAt) return res.status(400).json({ success: false, message: "You already checked in" });
+      if (booking.bookingDate.getTime() - Date.now() > CHECK_IN_EARLY_MS) {
+        return res.status(400).json({ success: false, message: "You can check in from 1 hour before the start time" });
+      }
+      booking.checkInAt = new Date();
+    } else {
+      if (!booking.checkInAt) return res.status(400).json({ success: false, message: "Check in first" });
+      if (booking.checkOutAt) return res.status(400).json({ success: false, message: "You already checked out" });
+      booking.checkOutAt = new Date();
+    }
+    await booking.save();
+
+    res.status(200).json({
+      success: true,
+      message: kind === "in" ? "Checked in. Stay safe — the SOS button is always on your screen." : "Checked out. Glad you're safe!",
+      booking,
+    });
+  } catch (error) {
+    handleError(res, error);
+  }
+};
+
 module.exports = {
   createBooking,
   getMyBookings,
   getProviderBookings,
   updateBookingStatus,
   cancelBooking,
+  checkIn: checkInOut("in"),
+  checkOut: checkInOut("out"),
   getProviderDashboard,
   getCustomerDashboard,
 };

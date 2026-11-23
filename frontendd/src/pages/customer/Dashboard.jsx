@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../../lib/api";
 import { Avatar, ConfirmModal, Empty, Loading, StatusBadge } from "../../components/ui";
+import BookingDetails from "../../components/BookingDetails";
 import { useToast } from "../../context/ToastContext";
 import { usePageTitle } from "../../lib/usePageTitle";
 import { formatDate, getError, isOverdue, phoneHref, whatsappHref } from "../../lib/format";
@@ -132,12 +133,7 @@ function CustomerDashboard() {
                   </div>
                   <StatusBadge status={isOverdue(booking, now) ? "overdue" : booking.status} />
                 </div>
-                <dl className="meta-grid">
-                  <div><dt>Service</dt><dd>{booking.service}</dd></div>
-                  <div><dt>When</dt><dd>{formatDate(booking.bookingDate)}</dd></div>
-                  <div><dt>Address</dt><dd>{booking.address}</dd></div>
-                  <div><dt>Note</dt><dd>{booking.message || "—"}</dd></div>
-                </dl>
+                <BookingDetails booking={booking} viewer="customer" providerAddress={provider.providerAddress} />
                 {canContact ? (
                   <div className="cluster">
                     {phoneHref(provider.phone) ? <a className="btn btn-line btn-sm" href={phoneHref(provider.phone)}>Call</a> : null}
