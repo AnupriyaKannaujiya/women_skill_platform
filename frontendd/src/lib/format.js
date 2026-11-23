@@ -121,3 +121,8 @@ export function localDateTimeValue(date = new Date()) {
   copy.setMinutes(copy.getMinutes() - copy.getTimezoneOffset());
   return copy.toISOString().slice(0, 16);
 }
+
+// Accepted work whose booked time has passed but was never marked completed or cancelled.
+export function isOverdue(booking, now = Date.now()) {
+  return booking?.status === "accepted" && new Date(booking.bookingDate).getTime() < now;
+}

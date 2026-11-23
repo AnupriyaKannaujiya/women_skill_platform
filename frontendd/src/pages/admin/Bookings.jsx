@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import api from "../../lib/api";
 import { Loading, Modal, StatusBadge } from "../../components/ui";
 import { usePageTitle } from "../../lib/usePageTitle";
-import { formatDate, getError } from "../../lib/format";
+import { formatDate, getError, isOverdue } from "../../lib/format";
 
 function AdminBookings() {
   usePageTitle("Bookings");
   const [bookings, setBookings] = useState([]);
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("all");
+  // Links such as /admin/bookings?status=overdue open with that filter already set.
+  const [searchParams] = useSearchParams();
+  const [status, setStatus] = useState(() => searchParams.get("status") || "all");
   const [page, setPage] = useState(1);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -37,7 +40,8 @@ function AdminBookings() {
       const query = search.trim().toLowerCase();
       const names = `${booking.customer?.name || ""} ${booking.provider?.name || ""}`.toLowerCase();
       const matchesQuery = !query || names.includes(query) || booking.service?.toLowerCase().includes(query);
-      const matchesStatus = status === "all" || booking.status === status;
+      const matchesStatus =
+        status === "all" || (status === "overdue" ? isOverdue(booking) : booking.status === status);
       return matchesQuery && matchesStatus;
     });
   }, [bookings, search, status]);
@@ -62,6 +66,8 @@ function AdminBookings() {
           <option value="completed">Completed</option>
           <option value="rejected">Rejected</option>
           <option value="cancelled">Cancelled</option>
+          <option value="expired">Expired</option>
+          <option value="overdue">Overdue (past date, not completed)</option>
         </select>
       </div>
       <div className="table-wrap">
@@ -86,7 +92,7 @@ function AdminBookings() {
                   <td>{booking.provider?.name}</td>
                   <td>{booking.service}</td>
                   <td>{formatDate(booking.bookingDate)}</td>
-                  <td><StatusBadge status={booking.status} /></td>
+                  <td><StatusBadge status={isOverdue(booking) ? "overdue" : booking.status} /></td>
                   <td><button className="btn btn-line btn-sm" type="button" onClick={() => setSelected(booking)}>Details</button></td>
                 </tr>
               ))

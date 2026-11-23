@@ -4,9 +4,9 @@ import api from "../../lib/api";
 import { useToast } from "../../context/ToastContext";
 import { ConfirmModal, Empty, Loading, StatusBadge } from "../../components/ui";
 import { usePageTitle } from "../../lib/usePageTitle";
-import { formatDate, getError, phoneHref, skillList, unwrapUser } from "../../lib/format";
+import { formatDate, getError, isOverdue, phoneHref, skillList, unwrapUser } from "../../lib/format";
 
-const TABS = ["all", "pending", "accepted", "completed", "rejected", "cancelled"];
+const TABS = ["all", "pending", "accepted", "completed", "rejected", "cancelled", "expired"];
 
 function completion(user) {
   if (!user) return 0;
@@ -78,9 +78,13 @@ function ProviderDashboard() {
 
   if (loading && !user) return <Loading label="Loading requests" />;
 
-  const countFor = (tab) =>
-    tab === "all" ? bookings.length : bookings.filter((item) => item.status === tab).length;
-  const shown = filter === "all" ? bookings : bookings.filter((item) => item.status === filter);
+  const overdue = bookings.filter((item) => isOverdue(item, now));
+  // "overdue" is a view, not a stored status: accepted work whose date has passed.
+  const matches = (tab) => (item) =>
+    tab === "all" ? true : tab === "overdue" ? isOverdue(item, now) : item.status === tab;
+  const countFor = (tab) => bookings.filter(matches(tab)).length;
+  const tabs = overdue.length ? ["overdue", ...TABS] : TABS;
+  const shown = bookings.filter(matches(filter));
 
   const percent = completion(user);
   const cards = [
@@ -125,9 +129,23 @@ function ProviderDashboard() {
       </section>
 
       <h2 style={{ margin: "22px 0 12px" }}>Requests</h2>
+      {overdue.length ? (
+        <div className="note note-warn" role="status" style={{ marginBottom: 14 }}>
+          <strong>
+            {overdue.length} booking{overdue.length === 1 ? "" : "s"} need{overdue.length === 1 ? "s" : ""} an update.
+          </strong>{" "}
+          The booked time has passed. Mark the work completed so the customer can review you, or cancel it if it did
+          not happen.{" "}
+          {filter !== "overdue" ? (
+            <button className="btn btn-line btn-sm" type="button" onClick={() => setFilter("overdue")}>
+              Show {overdue.length === 1 ? "it" : "them"}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
       {bookings.length ? (
         <div className="chip-row" role="tablist" aria-label="Filter requests" style={{ marginBottom: 14 }}>
-          {TABS.map((tab) => (
+          {tabs.map((tab) => (
             <button
               key={tab}
               type="button"
@@ -161,7 +179,7 @@ function ProviderDashboard() {
                     <p className="muted">No phone shared</p>
                   )}
                 </div>
-                <StatusBadge status={booking.status} />
+                <StatusBadge status={isOverdue(booking, now) ? "overdue" : booking.status} />
               </div>
               <dl className="meta-grid">
                 <div><dt>Service</dt><dd>{booking.service}</dd></div>
@@ -188,10 +206,19 @@ function ProviderDashboard() {
                   ) : (
                     <span className="help">You can mark this completed after {formatDate(booking.bookingDate)}.</span>
                   )}
-                  <button className="btn btn-line btn-sm" type="button" disabled={Boolean(busy)} onClick={() => setConfirm({ booking, status: "rejected" })}>
-                    Cancel booking
+                  <button className="btn btn-line btn-sm" type="button" disabled={Boolean(busy)} onClick={() => setConfirm({ booking, status: "cancelled" })}>
+                    {due ? "It didn't happen" : "Cancel booking"}
                   </button>
                 </div>
+              ) : null}
+              {booking.status === "cancelled" ? (
+                <p className="help">
+                  {booking.cancelledBy === "provider" ? "You cancelled this booking" : "The customer cancelled this request"}
+                  {booking.cancelledAt ? ` on ${formatDate(booking.cancelledAt)}` : ""}.
+                </p>
+              ) : null}
+              {booking.status === "expired" ? (
+                <p className="help">This request expired because it was not answered before the booked time.</p>
               ) : null}
             </article>
           );
@@ -200,14 +227,25 @@ function ProviderDashboard() {
 
       {confirm ? (
         <ConfirmModal
-          title={confirm.status === "completed" ? "Mark this work completed?" : "Turn down this booking?"}
+          title={
+            confirm.status === "completed"
+              ? "Mark this work completed?"
+              : confirm.status === "cancelled"
+                ? "Cancel this booking?"
+                : "Turn down this booking?"
+          }
           text={
             confirm.status === "completed"
               ? `${confirm.booking.customer?.name || "The customer"} will then be able to leave a review. This cannot be changed later.`
-              : `${confirm.booking.customer?.name || "The customer"} will see it as rejected. This cannot be undone.`
+              : confirm.status === "cancelled"
+                ? `${confirm.booking.customer?.name || "The customer"} will see that you cancelled it. This cannot be undone.`
+                : `${confirm.booking.customer?.name || "The customer"} will see it as rejected. This cannot be undone.`
           }
-          confirmLabel={confirm.status === "completed" ? "Mark completed" : "Reject booking"}
-          danger={confirm.status === "rejected"}
+          confirmLabel={
+            confirm.status === "completed" ? "Mark completed" : confirm.status === "cancelled" ? "Yes, cancel it" : "Reject booking"
+          }
+          cancelLabel={confirm.status === "completed" ? "Not yet" : "Keep booking"}
+          danger={confirm.status !== "completed"}
           busy={Boolean(busy)}
           onCancel={() => setConfirm(null)}
           onConfirm={async () => {

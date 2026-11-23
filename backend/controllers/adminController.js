@@ -5,6 +5,7 @@ const { updateProviderRating } = require("../utils/rating");
 const Booking = require("../models/Booking");
 const Review = require("../models/Review");
 const ContactMessage = require("../models/ContactMessage");
+const { expireStalePendingBookings, overdueFilter } = require("../utils/bookingMaintenance");
 
 const getAllUsers = async (req, res) => {
   try {
@@ -70,6 +71,8 @@ const deleteUser = async (req, res) => {
 
 const getDashboardStats = async (req, res) => {
   try {
+    await expireStalePendingBookings();
+
     const totalUsers = await User.countDocuments();
 
     const totalProviders = await User.countDocuments({
@@ -102,6 +105,10 @@ const getDashboardStats = async (req, res) => {
 
     const cancelledBookings = await Booking.countDocuments({ status: "cancelled" });
 
+    const expiredBookings = await Booking.countDocuments({ status: "expired" });
+
+    const overdueBookings = await Booking.countDocuments(overdueFilter());
+
     const totalReviews = await Review.countDocuments();
 
     const unreadMessages = await ContactMessage.countDocuments({ isRead: false });
@@ -119,6 +126,8 @@ const getDashboardStats = async (req, res) => {
         completedBookings,
         rejectedBookings,
         cancelledBookings,
+        expiredBookings,
+        overdueBookings,
         totalReviews,
         unreadMessages,
       },
@@ -130,6 +139,8 @@ const getDashboardStats = async (req, res) => {
 
 const getAllBookings = async (req, res) => {
   try {
+    await expireStalePendingBookings();
+
     const bookings = await Booking.find()
       .populate("customer", "name email phone")
       .populate("provider", "name email phone")

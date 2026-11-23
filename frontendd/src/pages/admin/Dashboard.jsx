@@ -97,6 +97,7 @@ function AdminDashboard() {
         ["Completed", stats.completedBookings],
         ["Rejected", stats.rejectedBookings ?? 0],
         ["Cancelled", stats.cancelledBookings ?? 0],
+        ["Expired", stats.expiredBookings ?? 0],
       ]
     : [];
   const maxBar = Math.max(...bars.map((item) => item[1]), 1);
@@ -110,6 +111,12 @@ function AdminDashboard() {
         <div className="note" style={{ marginBottom: 14 }}>
           {stats.unreadMessages} new message{stats.unreadMessages === 1 ? "" : "s"} from the Contact page.{" "}
           <Link to="/admin/messages">Open messages</Link>
+        </div>
+      ) : null}
+      {stats?.overdueBookings ? (
+        <div className="note note-warn" style={{ marginBottom: 14 }}>
+          {stats.overdueBookings} accepted booking{stats.overdueBookings === 1 ? " is" : "s are"} past the booked date
+          but not marked completed. <Link to="/admin/bookings?status=overdue">See overdue bookings</Link>
         </div>
       ) : null}
       <div className="stat-grid">

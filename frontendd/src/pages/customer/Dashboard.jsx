@@ -4,9 +4,9 @@ import api from "../../lib/api";
 import { Avatar, ConfirmModal, Empty, Loading, StatusBadge } from "../../components/ui";
 import { useToast } from "../../context/ToastContext";
 import { usePageTitle } from "../../lib/usePageTitle";
-import { formatDate, getError, phoneHref, whatsappHref } from "../../lib/format";
+import { formatDate, getError, isOverdue, phoneHref, whatsappHref } from "../../lib/format";
 
-const TABS = ["all", "pending", "accepted", "completed", "rejected", "cancelled"];
+const TABS = ["all", "pending", "accepted", "completed", "rejected", "cancelled", "expired"];
 
 function CustomerDashboard() {
   usePageTitle("My bookings");
@@ -130,7 +130,7 @@ function CustomerDashboard() {
                       <p className="muted">{provider.city}</p>
                     </div>
                   </div>
-                  <StatusBadge status={booking.status} />
+                  <StatusBadge status={isOverdue(booking, now) ? "overdue" : booking.status} />
                 </div>
                 <dl className="meta-grid">
                   <div><dt>Service</dt><dd>{booking.service}</dd></div>
@@ -147,6 +147,12 @@ function CustomerDashboard() {
                     {booking.status === "completed" ? (
                       <Link className="btn btn-primary btn-sm" to={`/review/${provider._id}`}>Write a review</Link>
                     ) : null}
+                    {isOverdue(booking, now) ? (
+                      <p className="help" style={{ flexBasis: "100%" }}>
+                        The booked time has passed. Once she marks it completed you can write a review. Something went
+                        wrong? <Link to="/contact">Tell us</Link>.
+                      </p>
+                    ) : null}
                   </div>
                 ) : booking.status === "rejected" ? (
                   <div className="cluster">
@@ -154,7 +160,19 @@ function CustomerDashboard() {
                     <Link className="btn btn-line btn-sm" to="/providers">Find someone else</Link>
                   </div>
                 ) : booking.status === "cancelled" ? (
-                  <p className="muted">You cancelled this request{booking.cancelledAt ? ` on ${formatDate(booking.cancelledAt)}` : ""}.</p>
+                  booking.cancelledBy === "provider" ? (
+                    <div className="cluster">
+                      <p className="muted">She cancelled this booking{booking.cancelledAt ? ` on ${formatDate(booking.cancelledAt)}` : ""}.</p>
+                      <Link className="btn btn-line btn-sm" to="/providers">Find someone else</Link>
+                    </div>
+                  ) : (
+                    <p className="muted">You cancelled this request{booking.cancelledAt ? ` on ${formatDate(booking.cancelledAt)}` : ""}.</p>
+                  )
+                ) : booking.status === "expired" ? (
+                  <div className="cluster">
+                    <p className="muted">She did not reply before the booked time, so this request closed.</p>
+                    <Link className="btn btn-line btn-sm" to="/providers">Find someone else</Link>
+                  </div>
                 ) : (
                   <p className="muted">Phone and WhatsApp open after she accepts.</p>
                 )}

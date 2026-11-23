@@ -23,8 +23,11 @@ if (missing.length) {
   console.warn("Missing environment variables:", missing.join(", "));
 }
 
+const mongoose = require("mongoose");
 const connectDB = require("./config/db");
+const { startBookingMaintenance } = require("./utils/bookingMaintenance");
 connectDB();
+mongoose.connection.once("open", startBookingMaintenance);
 
 // Comma-separated list of frontend origins allowed to call the API.
 const allowedOrigins = (process.env.CLIENT_URL || "http://localhost:5173,http://127.0.0.1:5173")

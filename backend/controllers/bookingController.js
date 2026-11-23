@@ -3,16 +3,24 @@ const Booking = require("../models/Booking");
 const User = require("../models/User");
 const Review = require("../models/Review");
 const mongoose = require("mongoose");
+const { expireStalePendingBookings, overdueFilter } = require("../utils/bookingMaintenance");
 
-// Which status a booking may move to from its current status.
+// Which status a provider may move a booking to from its current status.
 // Anything not listed here (e.g. pending -> completed, completed -> rejected) is refused.
 const ALLOWED_TRANSITIONS = {
   pending: ["accepted", "rejected"],
-  accepted: ["completed", "rejected"],
+  accepted: ["completed", "cancelled"],
   rejected: [],
   completed: [],
   cancelled: [],
+  expired: [],
 };
+
+// Lists are read often; closing stale requests first keeps every screen up to date
+// even between the background runs.
+const refreshStale = () => expireStalePendingBookings().catch(() => 0);
+
+const withArticle = (word) => `${/^[aeiou]/i.test(word) ? "An" : "A"} ${word}`;
 
 const createBooking = async (req, res) => {
   try {
@@ -98,6 +106,8 @@ const createBooking = async (req, res) => {
 
 const getMyBookings = async (req, res) => {
   try {
+    await refreshStale();
+
     const bookings = await Booking.find({
       customer: req.user.id,
     })
@@ -126,6 +136,8 @@ const getMyBookings = async (req, res) => {
 
 const getProviderBookings = async (req, res) => {
   try {
+    await refreshStale();
+
     const bookings = await Booking.find({
       provider: req.user.id,
     })
@@ -146,11 +158,17 @@ const updateBookingStatus = async (req, res) => {
   try {
     const { status } = req.body;
 
-    if (!["accepted", "rejected", "completed"].includes(status)) {
+    if (!["accepted", "rejected", "completed", "cancelled"].includes(status)) {
       return res.status(400).json({
         message: "Invalid status",
       });
     }
+
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    await refreshStale();
 
     const booking = await Booking.findById(req.params.id);
 
@@ -169,7 +187,7 @@ const updateBookingStatus = async (req, res) => {
     if (!ALLOWED_TRANSITIONS[booking.status]?.includes(status)) {
       return res.status(400).json({
         success: false,
-        message: `A ${booking.status} booking cannot be marked ${status}`,
+        message: `${withArticle(booking.status)} booking cannot be marked ${status}`,
       });
     }
 
@@ -183,6 +201,11 @@ const updateBookingStatus = async (req, res) => {
     }
 
     booking.status = status;
+
+    if (status === "cancelled") {
+      booking.cancelledBy = "provider";
+      booking.cancelledAt = new Date();
+    }
 
     await booking.save();
 
@@ -200,9 +223,13 @@ const getProviderDashboard = async (req, res) => {
   try {
     const providerId = req.user.id;
 
+    await refreshStale();
+
     const totalBookings = await Booking.countDocuments({
       provider: providerId,
     });
+
+    const overdueBookings = await Booking.countDocuments(overdueFilter({ provider: providerId }));
 
     const pendingBookings = await Booking.countDocuments({
       provider: providerId,
@@ -230,6 +257,7 @@ const getProviderDashboard = async (req, res) => {
         pendingBookings,
         acceptedBookings,
         completedBookings,
+        overdueBookings,
         totalReviews,
         rating: req.user.rating,
       },
@@ -242,6 +270,8 @@ const getProviderDashboard = async (req, res) => {
 const getCustomerDashboard = async (req, res) => {
   try {
     const customerId = req.user.id;
+
+    await refreshStale();
 
     const totalBookings = await Booking.countDocuments({
       customer: customerId,
@@ -293,7 +323,7 @@ const cancelBooking = async (req, res) => {
     if (!["pending", "accepted"].includes(booking.status)) {
       return res.status(400).json({
         success: false,
-        message: `A ${booking.status} booking cannot be cancelled`,
+        message: `${withArticle(booking.status)} booking cannot be cancelled`,
       });
     }
 
@@ -305,6 +335,7 @@ const cancelBooking = async (req, res) => {
     }
 
     booking.status = "cancelled";
+    booking.cancelledBy = "customer";
     booking.cancelledAt = new Date();
     await booking.save();
 

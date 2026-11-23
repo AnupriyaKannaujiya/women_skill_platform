@@ -241,6 +241,8 @@ button.chip.active { background: var(--ink); color: white; }
 .badge-completed { background: #f3e1d6; color: var(--clay-deep); }
 .badge-rejected { background: #f8dcdc; color: var(--danger); }
 .badge-cancelled { background: #ece7e1; color: var(--muted); }
+.badge-expired { background: #ece7e1; color: var(--muted); }
+.badge-overdue { background: #fbe3c4; color: #8a4b08; }
 
 .filters { display: grid; grid-template-columns: 280px 1fr; gap: 22px; align-items: start; }
 .filter-card { position: sticky; top: 90px; }
@@ -320,6 +322,8 @@ th { font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; colo
 
 .note { background: #f8efe4; border: 1px solid #ead7c4; border-radius: 14px; padding: 12px 14px; }
 .note-error { background: #fdecec; border-color: #f3c7c7; color: var(--danger); }
+.note-warn { background: #fdf3dc; border-color: #efd9a6; color: #6b4a0f; }
+.note-warn .btn { margin-left: 6px; }
 .empty, .state { padding: 28px 8px; text-align: center; color: var(--muted); }
 .spinner {
   width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--line);
