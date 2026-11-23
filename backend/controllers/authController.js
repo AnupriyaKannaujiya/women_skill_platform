@@ -1,8 +1,24 @@
+const handleError = require("../utils/handleError");
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const cloudinary = require("../config/cloudinary");
 const streamifier = require("streamifier");
+const { publicIdFromUrl, destroyImage } = require("../utils/cloudinaryHelpers");
+
+// Accepts ["Mehndi", "Tailoring, Crafting"] or "Mehndi, Tailoring" and returns a clean array.
+const normalizeSkills = (skill) => {
+  if (skill === undefined) return undefined;
+  const list = Array.isArray(skill) ? skill : [skill];
+  return [
+    ...new Set(
+      list
+        .flatMap((item) => String(item).split(","))
+        .map((item) => item.trim())
+        .filter(Boolean),
+    ),
+  ];
+};
 
 const register = async (req, res) => {
   try {
@@ -36,7 +52,7 @@ const register = async (req, res) => {
 
     const userRole = allowedRoles.includes(role) ? role : "customer";
 
-    const user = await User.create({
+    const userData = {
       name,
       email,
       password: hashedPassword,
@@ -44,22 +60,31 @@ const register = async (req, res) => {
       whatsapp,
       city,
       area,
-      skill,
-      experience,
-      price,
-      description,
       role: userRole,
-    });
+    };
+
+    // Skill, price, experience and description only mean something for providers.
+    if (userRole === "provider") {
+      Object.assign(userData, {
+        skill: normalizeSkills(skill),
+        experience,
+        price,
+        description,
+      });
+    }
+
+    const user = await User.create(userData);
+
+    const safeUser = user.toObject();
+    delete safeUser.password;
 
     res.status(201).json({
       success: true,
       message: "Registration Successful",
-      user,
+      user: safeUser,
     });
   } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
+    handleError(res, error);
   }
 };
 
@@ -69,10 +94,14 @@ const login = async (req, res) => {
 
     const user = await User.findOne({ email });
 
-    if (!user) {
+    // Same message for unknown email and wrong password, so the API
+    // does not reveal which emails are registered.
+    const isMatch = user ? await bcrypt.compare(password, user.password) : false;
+
+    if (!user || !isMatch) {
       return res.status(400).json({
         success: false,
-        message: "User not found",
+        message: "Invalid email or password",
       });
     }
 
@@ -80,15 +109,6 @@ const login = async (req, res) => {
       return res.status(403).json({
         success: false,
         message: "Your account has been blocked by admin",
-      });
-    }
-
-    const isMatch = await bcrypt.compare(password, user.password);
-
-    if (!isMatch) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid Password",
       });
     }
 
@@ -105,9 +125,7 @@ const login = async (req, res) => {
       user: safeUser,
     });
   } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
+    handleError(res, error);
   }
 };
 
@@ -117,39 +135,28 @@ const profile = async (req, res) => {
 
     res.status(200).json(user);
   } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
+    handleError(res, error);
   }
 };
 
 const updateProfile = async (req, res) => {
   try {
-    const {
-      photo,
-      name,
-      phone,
-      whatsapp,
-      city,
-      area,
-      skill,
-      experience,
-      price,
-      description,
-    } = req.body;
+    // `photo` is intentionally not accepted here: it can only be set through
+    // /upload-photo, so nobody can point their avatar at an arbitrary URL.
+    const { name, phone, whatsapp, city, area, skill, experience, price, description } =
+      req.body;
 
-    const updateData = {
-      photo,
-      name,
-      phone,
-      whatsapp,
-      city,
-      area,
-      skill,
-      experience,
-      price,
-      description,
-    };
+    const updateData = { name, phone, whatsapp, city, area };
+
+    if (req.user.role === "provider") {
+      Object.assign(updateData, {
+        skill: normalizeSkills(skill),
+        experience,
+        price,
+        description,
+      });
+    }
+
     const updatedUser = await User.findByIdAndUpdate(req.user.id, updateData, {
       new: true,
       runValidators: true,
@@ -161,9 +168,7 @@ const updateProfile = async (req, res) => {
       user: updatedUser,
     });
   } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
+    handleError(res, error);
   }
 };
 
@@ -192,17 +197,7 @@ const uploadProfilePhoto = async (req, res) => {
       });
     };
 
-    const user = await User.findById(req.user.id);
-
-    // if (user.photo) {
-    //   const photoPublicId = user.photo
-    //     .split("/")
-    //     .slice(-2)
-    //     .join("/")
-    //     .replace(/\.[^/.]+$/, "");
-
-    //   await cloudinary.uploader.destroy(photoPublicId);
-    // }
+    const previousPhoto = req.user.photo;
 
     const result = await uploadFromBuffer();
 
@@ -216,6 +211,11 @@ const uploadProfilePhoto = async (req, res) => {
       },
     ).select("-password");
 
+    // Delete the old photo only after the new one is saved.
+    if (previousPhoto && previousPhoto !== result.secure_url) {
+      await destroyImage(publicIdFromUrl(previousPhoto));
+    }
+
     res.status(200).json({
       success: true,
       message: "Profile photo uploaded successfully",
@@ -223,13 +223,7 @@ const uploadProfilePhoto = async (req, res) => {
       user: updatedUser,
     });
   } catch (error) {
-    console.error("========== FULL ERROR ==========");
-    console.error(error);
-    console.error("===============================");
-
-    res.status(500).json({
-      message: error.message,
-    });
+    handleError(res, error);
   }
 };
 
@@ -244,27 +238,22 @@ const removeProfilePhoto = async (req, res) => {
       });
     }
 
-    const photoPublicId = user.photo
-      .split("/")
-      .slice(-2)
-      .join("/")
-      .replace(/\.[^/.]+$/, "");
-
-    await cloudinary.uploader.destroy(photoPublicId);
+    await destroyImage(publicIdFromUrl(user.photo));
 
     user.photo = "";
 
     await user.save();
 
+    const safeUser = user.toObject();
+    delete safeUser.password;
+
     res.status(200).json({
       success: true,
       message: "Profile photo removed successfully",
-      user,
+      user: safeUser,
     });
   } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
+    handleError(res, error);
   }
 };
 
@@ -311,9 +300,7 @@ const uploadPortfolio = async (req, res) => {
       portfolio: user.portfolio,
     });
   } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
+    handleError(res, error);
   }
 };
 
@@ -344,9 +331,7 @@ const deletePortfolioImage = async (req, res) => {
       portfolio: user.portfolio,
     });
   } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
+    handleError(res, error);
   }
 };
 
@@ -383,10 +368,7 @@ const changePassword = async (req, res) => {
       message: "Password changed successfully",
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    handleError(res, error);
   }
 };
 

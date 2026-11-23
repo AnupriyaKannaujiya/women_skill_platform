@@ -47,10 +47,13 @@ const userSchema = new mongoose.Schema(
     experience: {
       type: Number,
       default: 0,
+      min: [0, "Experience cannot be negative"],
+      max: [80, "Experience looks too high"],
     },
 
     price: {
       type: Number,
+      min: [0, "Price cannot be negative"],
     },
 
     description: {

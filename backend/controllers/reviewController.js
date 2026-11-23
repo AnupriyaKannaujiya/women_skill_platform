@@ -1,31 +1,19 @@
+const handleError = require("../utils/handleError");
 const Review = require("../models/Review");
 const Booking = require("../models/Booking");
-const User = require("../models/User");
-
-const updateProviderRating = async (providerId) => {
-  const reviews = await Review.find({
-    provider: providerId,
-  });
-
-  const totalReviews = reviews.length;
-
-  const totalRating = reviews.reduce((sum, review) => {
-    return sum + review.rating;
-  }, 0);
-
-  const averageRating = totalReviews
-    ? totalRating / totalReviews
-    : 0;
-
-  await User.findByIdAndUpdate(providerId, {
-    rating: Number(averageRating.toFixed(1)),
-    totalReviews,
-  });
-};
+const mongoose = require("mongoose");
+const { updateProviderRating } = require("../utils/rating");
 
 const addReview = async (req, res) => {
   try {
     const { provider, rating, comment } = req.body;
+
+    if (!mongoose.isValidObjectId(provider)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid provider",
+      });
+    }
 
     const booking = await Booking.findOne({
       customer: req.user.id,
@@ -63,9 +51,7 @@ const addReview = async (req, res) => {
       review,
     });
   } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
+    handleError(res, error);
   }
 };
 
@@ -83,9 +69,7 @@ const getProviderReviews = async (req, res) => {
       reviews,
     });
   } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
+    handleError(res, error);
   }
 };
 
@@ -120,9 +104,7 @@ const updateReview = async (req, res) => {
       review,
     });
   } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
+    handleError(res, error);
   }
 };
 
@@ -151,9 +133,7 @@ const deleteReview = async (req, res) => {
       message: "Review Deleted Successfully",
     });
   } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
+    handleError(res, error);
   }
 };
 

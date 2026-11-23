@@ -1,5 +1,7 @@
+const handleError = require("../utils/handleError");
 const User = require("../models/User");
-const cloudinary = require("../config/cloudinary");
+const { publicIdFromUrl, destroyImage } = require("../utils/cloudinaryHelpers");
+const { updateProviderRating } = require("../utils/rating");
 const Booking = require("../models/Booking");
 const Review = require("../models/Review");
 
@@ -13,9 +15,7 @@ const getAllUsers = async (req, res) => {
       users,
     });
   } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
+    handleError(res, error);
   }
 };
 
@@ -29,19 +29,21 @@ const deleteUser = async (req, res) => {
       });
     }
 
-    if (user.photo) {
-      const photoPublicId = user.photo
-        .split("/")
-        .slice(-2)
-        .join("/")
-        .replace(/\.[^/.]+$/, "");
-
-      await cloudinary.uploader.destroy(photoPublicId);
+    if (user.role === "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Admin cannot be deleted",
+      });
     }
+
+    await destroyImage(publicIdFromUrl(user.photo));
 
     for (const image of user.portfolio) {
-      await cloudinary.uploader.destroy(image.public_id);
+      await destroyImage(image.public_id);
     }
+
+    // Providers this user reviewed need their rating recalculated after the reviews go.
+    const reviewedProviders = await Review.distinct("provider", { reviewer: user._id });
 
     await Booking.deleteMany({
       $or: [{ customer: user._id }, { provider: user._id }],
@@ -52,14 +54,16 @@ const deleteUser = async (req, res) => {
     });
     await user.deleteOne();
 
+    for (const providerId of reviewedProviders) {
+      await updateProviderRating(providerId);
+    }
+
     res.status(200).json({
       success: true,
       message: "User deleted successfully",
     });
   } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
+    handleError(res, error);
   }
 };
 
@@ -110,9 +114,7 @@ const getDashboardStats = async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
+    handleError(res, error);
   }
 };
 
@@ -129,9 +131,7 @@ const getAllBookings = async (req, res) => {
       bookings,
     });
   } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
+    handleError(res, error);
   }
 };
 
@@ -148,15 +148,13 @@ const getAllReviews = async (req, res) => {
       reviews,
     });
   } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
+    handleError(res, error);
   }
 };
 
 const toggleUserBlock = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id);
+    const user = await User.findById(req.params.id).select("-password");
 
     if (!user) {
       return res.status(404).json({
@@ -182,9 +180,7 @@ const toggleUserBlock = async (req, res) => {
       user,
     });
   } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
+    handleError(res, error);
   }
 };
 
@@ -201,14 +197,14 @@ const deleteReview = async (req, res) => {
 
     await review.deleteOne();
 
+    await updateProviderRating(review.provider);
+
     res.status(200).json({
       success: true,
       message: "Review deleted successfully",
     });
   } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
+    handleError(res, error);
   }
 };
 

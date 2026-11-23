@@ -3,6 +3,7 @@ const { body } = require("express-validator");
 const validate = require("../middleware/validationMiddleware");
 const authMiddleware = require("../middleware/authMiddleware");
 const upload = require("../middleware/uploadMiddleware");
+const roleMiddleware = require("../middleware/roleMiddleware");
 
 const router = express.Router();
 
@@ -60,11 +61,17 @@ router.delete("/remove-photo", authMiddleware, removeProfilePhoto);
 router.post(
   "/upload-portfolio",
   authMiddleware,
+  roleMiddleware("provider"),
   upload.array("portfolio", 10),
   uploadPortfolio,
 );
 
-router.delete("/portfolio/:imageId", authMiddleware, deletePortfolioImage);
+router.delete(
+  "/portfolio/:imageId",
+  authMiddleware,
+  roleMiddleware("provider"),
+  deletePortfolioImage,
+);
 
 router.put(
   "/change-password",
