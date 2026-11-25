@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import api from "../../lib/api";
 import { Avatar, ConfirmModal, Empty, Loading, StatusBadge } from "../../components/ui";
 import BookingDetails from "../../components/BookingDetails";
+import { RescheduleBanner, RescheduleModal, canReschedule } from "../../components/Reschedule";
 import { useToast } from "../../context/ToastContext";
 import { usePageTitle } from "../../lib/usePageTitle";
 import { formatDate, getError, isOverdue, phoneHref, whatsappHref } from "../../lib/format";
@@ -19,6 +20,7 @@ function CustomerDashboard() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [confirm, setConfirm] = useState(null);
+  const [moving, setMoving] = useState(null);
   const [busy, setBusy] = useState(false);
   // Bumped after an action so the effect below reloads the list.
   const [version, setVersion] = useState(0);
@@ -185,11 +187,19 @@ function CustomerDashboard() {
                 ) : (
                   <p className="muted">Phone and WhatsApp open after she accepts.</p>
                 )}
-                {canCancel(booking) ? (
+                <RescheduleBanner booking={booking} viewer="customer" onChanged={() => setVersion((value) => value + 1)} />
+                {canCancel(booking) || canReschedule(booking, now) ? (
                   <div className="cluster" style={{ marginTop: 10 }}>
-                    <button className="btn btn-line btn-sm" type="button" onClick={() => setConfirm(booking)}>
-                      Cancel booking
-                    </button>
+                    {canReschedule(booking, now) ? (
+                      <button className="btn btn-line btn-sm" type="button" onClick={() => setMoving(booking)}>
+                        🕑 Change time
+                      </button>
+                    ) : null}
+                    {canCancel(booking) ? (
+                      <button className="btn btn-line btn-sm" type="button" onClick={() => setConfirm(booking)}>
+                        Cancel booking
+                      </button>
+                    ) : null}
                   </div>
                 ) : null}
               </article>
@@ -197,6 +207,19 @@ function CustomerDashboard() {
           })
         )}
       </div>
+
+      {moving ? (
+        <RescheduleModal
+          booking={moving}
+          providerId={moving.provider?._id}
+          viewer="customer"
+          onClose={() => setMoving(null)}
+          onDone={() => {
+            setMoving(null);
+            setVersion((value) => value + 1);
+          }}
+        />
+      ) : null}
 
       {confirm ? (
         <ConfirmModal

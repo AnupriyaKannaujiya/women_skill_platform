@@ -45,6 +45,15 @@ function BookingDetails({ booking, viewer, providerAddress }) {
         </dd>
       </div>
       {booking.message ? <div><dt>Note</dt><dd>{booking.message}</dd></div> : null}
+      {booking.rescheduleHistory?.length ? (
+        <div>
+          <dt>Rescheduled</dt>
+          <dd>
+            from {formatDate(booking.rescheduleHistory[booking.rescheduleHistory.length - 1].from)}
+            {booking.rescheduleHistory.length > 1 ? ` (${booking.rescheduleHistory.length} times)` : ""}
+          </dd>
+        </div>
+      ) : null}
       {booking.checkInAt ? (
         <div>
           <dt>Safety check</dt>

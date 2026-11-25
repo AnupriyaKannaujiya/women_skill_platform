@@ -77,6 +77,30 @@ const bookingSchema = new mongoose.Schema(
     checkOutAt: Date,
     safetyAlertAt: Date,
 
+    // The open (or last) request to move this booking to another time.
+    reschedule: {
+      proposedBy: { type: String, enum: ["customer", "provider"] },
+      newStart: Date,
+      newEnd: Date,
+      note: { type: String, maxlength: 300 },
+      status: { type: String, enum: ["pending", "accepted", "declined", "withdrawn"] },
+      createdAt: Date,
+      respondedAt: Date,
+    },
+
+    // Every time change that was agreed, oldest first.
+    rescheduleHistory: [
+      {
+        _id: false,
+        proposedBy: String,
+        from: Date,
+        to: Date,
+        at: Date,
+      },
+    ],
+
+    rescheduleCount: { type: Number, default: 0 },
+
     message: {
       type: String,
     },

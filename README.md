@@ -118,6 +118,22 @@ same rules, so two customers cannot take the same slot.
 - **Admin → Customer reports:** warn the customer (in-app + email), block them from the platform,
   close, or dismiss (note required). The reporting provider is told the outcome.
 
+## Changing the booking time
+
+Either side can ask to move a **pending** or **accepted** booking instead of cancelling it.
+
+- **Customer:** *🕑 Change time* on the booking card. **Provider:** *🕑 Change time* on an accepted
+  booking, or *🕑 Suggest another time* on a new request (a counter-offer instead of rejecting it).
+- The picker shows the provider's calendar for the next 30 days; the booking's own slot counts as free.
+  The new time must be inside her working hours, not clash with other bookings, and at least an hour away.
+- The other side gets an in-app + email notification and a banner with **Accept new time** /
+  **Keep original time**. The person who asked can **Withdraw** until then. Until someone accepts,
+  the booking keeps its original time.
+- Accepting moves the booking, re-arms the reminder and safety check-out alerts, and adds a
+  "Rescheduled from …" line. Accepting a provider's counter-offer on a pending request also confirms it.
+- A pending request with an open counter-offer for a later time does not expire.
+- Limits: one open request at a time, at most 3 requests per booking, not after the visit has started.
+
 ## Notifications
 
 Signed-in users have a 🔔 bell in the header with an unread count (refreshed on every page
@@ -177,7 +193,7 @@ pending ──accept──► accepted ──complete (after booking date)──
 |---|---|
 | Auth | `POST /api/auth/register`, `POST /api/auth/login`, `GET/PUT /api/auth/profile`, `PUT /api/auth/change-password`, `POST /api/auth/forgot-password`, `POST /api/auth/reset-password/:token`, photo and portfolio uploads |
 | Providers | `GET /api/users/search`, `GET /api/users/:id` |
-| Bookings | `POST /api/bookings`, `GET /api/bookings/my`, `GET /api/bookings/provider`, `PUT /api/bookings/:id/status`, `PUT /api/bookings/:id/cancel` |
+| Bookings | `POST /api/bookings`, `GET /api/bookings/my`, `GET /api/bookings/provider`, `PUT /api/bookings/:id/status`, `PUT /api/bookings/:id/cancel`, `POST/DELETE /api/bookings/:id/reschedule`, `PUT /api/bookings/:id/reschedule/respond` |
 | Reviews | `POST /api/reviews`, `PUT/DELETE /api/reviews/:id`, `GET /api/reviews/:providerId` |
 | Contact | `POST /api/contact` |
 | Provider settings | `GET/PUT /api/providers/settings` (provider); `GET /api/providers/:id/availability`, `POST /api/providers/:id/quote` (public) |

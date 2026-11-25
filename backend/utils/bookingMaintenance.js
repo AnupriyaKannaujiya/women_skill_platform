@@ -14,7 +14,12 @@ const BATCH = 200;
 // runs never notify twice for the same booking.
 const expireStalePendingBookings = async () => {
   const now = new Date();
-  const stale = await Booking.find({ status: "pending", bookingDate: { $lt: now } })
+  // A request with a later time suggested and not yet answered is still alive.
+  const stale = await Booking.find({
+    status: "pending",
+    bookingDate: { $lt: now },
+    $nor: [{ "reschedule.status": "pending", "reschedule.newStart": { $gt: now } }],
+  })
     .select("_id")
     .limit(BATCH)
     .lean();

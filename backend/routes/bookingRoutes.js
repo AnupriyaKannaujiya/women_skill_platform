@@ -17,6 +17,11 @@ const {
   getProviderDashboard,
   getCustomerDashboard,
 } = require("../controllers/bookingController");
+const {
+  proposeReschedule,
+  respondReschedule,
+  withdrawReschedule,
+} = require("../controllers/rescheduleController");
 
 router.post(
   "/",
@@ -75,6 +80,12 @@ router.put("/:id/cancel", authMiddleware, roleMiddleware("customer"), cancelBook
 router.put("/:id/check-in", authMiddleware, roleMiddleware("provider"), checkIn);
 
 router.put("/:id/check-out", authMiddleware, roleMiddleware("provider"), checkOut);
+
+// Moving a booking to another time: either side proposes, the other side answers.
+const bothSides = [authMiddleware, roleMiddleware("customer", "provider")];
+router.post("/:id/reschedule", ...bothSides, proposeReschedule);
+router.put("/:id/reschedule/respond", ...bothSides, respondReschedule);
+router.delete("/:id/reschedule", ...bothSides, withdrawReschedule);
 
 router.get(
   "/provider/dashboard",

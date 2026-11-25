@@ -4,6 +4,7 @@ import api from "../../lib/api";
 import { useToast } from "../../context/ToastContext";
 import { ConfirmModal, Empty, Loading, Modal, StatusBadge } from "../../components/ui";
 import BookingDetails from "../../components/BookingDetails";
+import { RescheduleBanner, RescheduleModal, canReschedule } from "../../components/Reschedule";
 import { CustomerSafetyLine, RateCustomerModal, ReportCustomerModal } from "../../components/CustomerFeedback";
 import { usePageTitle } from "../../lib/usePageTitle";
 import { formatDate, formatMoney, getError, isOverdue, phoneHref, skillList, unwrapUser } from "../../lib/format";
@@ -43,6 +44,7 @@ function ProviderDashboard() {
   const [rated, setRated] = useState({});
   const [ratingFor, setRating] = useState(null);
   const [reporting, setReporting] = useState(null);
+  const [moving, setMoving] = useState(null);
   const [overtime, setOvertime] = useState("0");
   // Read the clock once per visit; the backend re-checks the date on completion anyway.
   const [now] = useState(() => Date.now());
@@ -260,11 +262,17 @@ function ProviderDashboard() {
                   )}
                 </div>
               ) : null}
-              {booking.status === "pending" ? (
+              <RescheduleBanner booking={booking} viewer="provider" onChanged={load} />
+              {booking.status === "pending" && booking.reschedule?.status !== "pending" ? (
                 <div className="cluster">
                   <button className="btn btn-sage btn-sm" type="button" disabled={Boolean(busy)} onClick={() => updateStatus(booking._id, "accepted")}>
                     {busy === booking._id + "accepted" ? "Accepting…" : "Accept"}
                   </button>
+                  {canReschedule(booking, now) ? (
+                    <button className="btn btn-line btn-sm" type="button" disabled={Boolean(busy)} onClick={() => setMoving(booking)}>
+                      🕑 Suggest another time
+                    </button>
+                  ) : null}
                   <button className="btn btn-danger btn-sm" type="button" disabled={Boolean(busy)} onClick={() => setConfirm({ booking, status: "rejected" })}>
                     Reject
                   </button>
@@ -279,6 +287,11 @@ function ProviderDashboard() {
                   ) : (
                     <span className="help">You can mark this completed after {formatDate(booking.bookingDate)}.</span>
                   )}
+                  {canReschedule(booking, now) ? (
+                    <button className="btn btn-line btn-sm" type="button" disabled={Boolean(busy)} onClick={() => setMoving(booking)}>
+                      🕑 Change time
+                    </button>
+                  ) : null}
                   <button className="btn btn-line btn-sm" type="button" disabled={Boolean(busy)} onClick={() => setConfirm({ booking, status: "cancelled" })}>
                     {due ? "It didn't happen" : "Cancel booking"}
                   </button>
@@ -313,6 +326,19 @@ function ProviderDashboard() {
           );
         })
       )}
+
+      {moving ? (
+        <RescheduleModal
+          booking={moving}
+          providerId={user?._id}
+          viewer="provider"
+          onClose={() => setMoving(null)}
+          onDone={() => {
+            setMoving(null);
+            load();
+          }}
+        />
+      ) : null}
 
       {ratingFor ? (
         <RateCustomerModal
