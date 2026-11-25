@@ -4,7 +4,7 @@ const User = require("../models/User");
 const Review = require("../models/Review");
 const mongoose = require("mongoose");
 const { expireStalePendingBookings, overdueFilter } = require("../utils/bookingMaintenance");
-const { notify, formatWhen } = require("../utils/notify");
+const { notify, formatWhen, rupees } = require("../utils/notify");
 const { quote, isLocation } = require("../utils/pricing");
 const { checkSlot } = require("../utils/availability");
 
@@ -157,7 +157,7 @@ const createBooking = async (req, res) => {
       to: providerUser,
       type: "booking_new",
       title: `New booking request from ${req.user.name}`,
-      body: `${req.user.name}${req.user.isVerified ? " (✓ verified customer)" : " (ID not verified)"} wants ${booking.service} — ${booking.package.label}, ${serviceMode === "at_customer" ? `at their place${booking.distanceKm !== undefined ? ` about ${booking.distanceKm} km away` : ""}` : "at your place"} — on ${formatWhen(booking.bookingDate)}. Total ₹${booking.charges.total}. Accept or decline it before that time, or it will expire.`,
+      body: `${req.user.name}${req.user.isVerified ? " (✓ verified customer)" : " (ID not verified)"} wants ${booking.service} — ${booking.package.label}, ${serviceMode === "at_customer" ? `at their place${booking.distanceKm !== undefined ? ` about ${booking.distanceKm} km away` : ""}` : "at your place"} — on ${formatWhen(booking.bookingDate)}. Total ${rupees(booking.charges.total)}. Accept or decline it before that time, or it will expire.`,
       link: "/provider/dashboard",
       booking: booking._id,
     });
@@ -317,7 +317,7 @@ const updateBookingStatus = async (req, res) => {
       },
       completed: {
         title: `How was ${booking.service} with ${providerName}?`,
-        body: `${providerName} marked your ${booking.service} booking as completed.${booking.charges?.total ? ` Final amount: ₹${booking.charges.total}${booking.overtimeHours ? ` (includes ${booking.overtimeHours} h overtime, ₹${booking.charges.overtime})` : ""}.` : ""} Please leave a review — it helps other customers.`,
+        body: `${providerName} marked your ${booking.service} booking as completed.${booking.charges?.total ? ` Final amount: ${rupees(booking.charges.total)}${booking.overtimeHours ? ` (includes ${booking.overtimeHours} h overtime, ${rupees(booking.charges.overtime)})` : ""}.` : ""} Please leave a review — it helps other customers.`,
       },
       cancelled: {
         title: `${providerName} cancelled your booking`,

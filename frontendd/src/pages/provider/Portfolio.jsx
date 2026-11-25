@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import api from "../../lib/api";
 import { useToast } from "../../context/ToastContext";
 import { Empty, Loading, Modal } from "../../components/ui";
@@ -12,7 +12,6 @@ function Portfolio() {
   usePageTitle("Portfolio");
   const toast = useToast();
   const [images, setImages] = useState([]);
-  const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [pending, setPending] = useState(null);
@@ -39,12 +38,14 @@ function Portfolio() {
     };
   }, [toast]);
 
-  // Preview URLs are created per selection and freed when it changes or the page unmounts.
-  useEffect(() => {
-    const next = files.map((file) => ({ file, url: URL.createObjectURL(file) }));
+  // Each picked photo keeps a preview URL from the moment it is chosen. URLs are freed
+  // when a photo is removed, after upload, and when the page closes (via the ref).
+  const previewsRef = useRef([]);
+  const setPicked = (next) => {
+    previewsRef.current = next;
     setPreviews(next);
-    return () => next.forEach((item) => URL.revokeObjectURL(item.url));
-  }, [files]);
+  };
+  useEffect(() => () => previewsRef.current.forEach((item) => URL.revokeObjectURL(item.url)), []);
 
   const addFiles = (list) => {
     const incoming = Array.from(list || []);
@@ -52,30 +53,33 @@ function Portfolio() {
     if (valid.length < incoming.length) {
       toast(`${incoming.length - valid.length} file(s) skipped: images only, up to 5 MB each.`, "error");
     }
-    const next = [...files, ...valid];
+    const next = [...previews, ...valid.map((file) => ({ file, url: URL.createObjectURL(file) }))];
     if (next.length > MAX_FILES) {
       toast(`Only the first ${MAX_FILES} photos were kept.`, "error");
+      next.slice(MAX_FILES).forEach((item) => URL.revokeObjectURL(item.url));
     }
-    setFiles(next.slice(0, MAX_FILES));
+    setPicked(next.slice(0, MAX_FILES));
   };
 
   const removeFile = (index) => {
-    setFiles((current) => current.filter((_, i) => i !== index));
+    URL.revokeObjectURL(previews[index].url);
+    setPicked(previews.filter((_, i) => i !== index));
   };
 
   const upload = async (event) => {
     event.preventDefault();
-    if (!files.length) {
+    if (!previews.length) {
       toast("Choose at least one image.", "error");
       return;
     }
     const body = new FormData();
-    files.forEach((file) => body.append("portfolio", file));
+    previews.forEach((item) => body.append("portfolio", item.file));
     setUploading(true);
     try {
       const response = await api.post("/auth/upload-portfolio", body);
       toast(response.data.message || "Portfolio updated.", "ok");
-      setFiles([]);
+      previews.forEach((item) => URL.revokeObjectURL(item.url));
+      setPicked([]);
       await load();
     } catch (error) {
       toast(getError(error), "error");
@@ -145,11 +149,11 @@ function Portfolio() {
             ))}
           </div>
         ) : null}
-        <button className="btn btn-primary" type="submit" disabled={uploading || !files.length} style={{ marginTop: 12 }}>
+        <button className="btn btn-primary" type="submit" disabled={uploading || !previews.length} style={{ marginTop: 12 }}>
           {uploading
             ? "Uploading…"
-            : files.length
-              ? `Upload ${files.length} photo${files.length === 1 ? "" : "s"}`
+            : previews.length
+              ? `Upload ${previews.length} photo${previews.length === 1 ? "" : "s"}`
               : "Upload"}
         </button>
       </form>

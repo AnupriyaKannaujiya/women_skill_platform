@@ -36,8 +36,8 @@ function Booking() {
   const [locating, setLocating] = useState(false);
   const [message, setMessage] = useState("");
 
-  const [quote, setQuote] = useState(null);
-  const [quoteError, setQuoteError] = useState("");
+  const [rawQuote, setQuote] = useState(null);
+  const [rawQuoteError, setQuoteError] = useState("");
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(null);
@@ -74,15 +74,15 @@ function Booking() {
   const day = calendar.find((item) => item.date === date);
   const starts = useMemo(() => freeStarts(day, hours, Boolean(pkg?.overnight), now), [day, hours, pkg, now]);
   const needsLocation = mode === "at_customer" && provider?.distanceBasedTravel;
+  // Until she shares her location the travel part is unknown, so no price is shown.
+  const waitingForLocation = Boolean(needsLocation && !location);
+  const quote = waitingForLocation ? null : rawQuote;
+  const quoteError = waitingForLocation ? "" : rawQuoteError;
 
   // Price from the server (travel uses her private base location).
   useEffect(() => {
     if (!provider || !packageId || !mode) return undefined;
-    if (needsLocation && !location) {
-      setQuote(null);
-      setQuoteError("");
-      return undefined;
-    }
+    if (waitingForLocation) return undefined;
     let cancelled = false;
     api
       .post(`/providers/${id}/quote`, { serviceMode: mode, packageId, location })
@@ -99,7 +99,7 @@ function Booking() {
     return () => {
       cancelled = true;
     };
-  }, [id, provider, packageId, mode, location, needsLocation]);
+  }, [id, provider, packageId, mode, location, waitingForLocation]);
 
   const shareLocation = async () => {
     setLocating(true);

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import api from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
@@ -51,13 +51,17 @@ function Verification() {
     };
   }, []);
 
-  // Free the preview URL when the chosen file changes or the page closes.
-  useEffect(() => {
-    if (!file) return undefined;
-    const url = URL.createObjectURL(file);
-    setPreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
+  // The preview URL is made when a photo is picked and freed when it is replaced,
+  // cleared, or the page closes (the ref lets the unmount cleanup see the latest one).
+  const previewRef = useRef("");
+  const showPreview = (next) => {
+    if (previewRef.current) URL.revokeObjectURL(previewRef.current);
+    previewRef.current = next ? URL.createObjectURL(next) : "";
+    setPreview(previewRef.current);
+  };
+  useEffect(() => () => {
+    if (previewRef.current) URL.revokeObjectURL(previewRef.current);
+  }, []);
 
   const choose = (event) => {
     const picked = event.target.files?.[0];
@@ -73,6 +77,7 @@ function Verification() {
       return;
     }
     setFile(picked);
+    showPreview(picked);
   };
 
   const submit = async (event) => {
@@ -94,7 +99,7 @@ function Verification() {
       const response = await api.post("/verification", body);
       setInfo(response.data.verification);
       setFile(null);
-      setPreview("");
+      showPreview(null);
       setConsent(false);
       setResubmit(false);
       toast(response.data.message || "Sent for review.", "ok");
@@ -198,7 +203,7 @@ function Verification() {
               {sending ? "Uploading…" : "Send for verification"}
             </button>
             {resubmit ? (
-              <button className="btn btn-line" type="button" onClick={() => { setResubmit(false); setFile(null); setPreview(""); setError(""); }}>
+              <button className="btn btn-line" type="button" onClick={() => { setResubmit(false); setFile(null); showPreview(null); setError(""); }}>
                 Keep the earlier upload
               </button>
             ) : null}

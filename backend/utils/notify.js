@@ -16,6 +16,9 @@ const formatWhen = (date) =>
     minute: "2-digit",
   });
 
+// 1325 -> "₹1,325"
+const rupees = (amount) => `₹${Math.round(Number(amount) || 0).toLocaleString("en-IN")}`;
+
 const firstName = (name) => String(name || "").trim().split(/\s+/)[0] || "there";
 
 /**
@@ -60,4 +63,4 @@ const notify = async ({ to, type, title, body, link, booking, email = true, forc
   }
 };
 
-module.exports = { notify, formatWhen, firstName };
+module.exports = { notify, formatWhen, firstName, rupees };

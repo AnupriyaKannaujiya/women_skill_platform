@@ -9,13 +9,12 @@ import { WEEKDAYS, WEEKDAYS_LONG, addDays, dayLabel, localParts, minutesLabel } 
 // Monday-first order for the editor and the month grid.
 const ORDER = [1, 2, 3, 4, 5, 6, 0];
 
-function MonthCalendar({ monthKey, week, blocked, bookings, onToggleDay }) {
+function MonthCalendar({ monthKey, today, week, blocked, bookings, onToggleDay }) {
   const [year, month] = monthKey.split("-").map(Number);
   const first = `${monthKey}-01`;
   const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
   const firstWeekday = localParts(new Date(Date.UTC(year, month - 1, 1, 6))).weekday;
   const lead = (firstWeekday + 6) % 7;
-  const today = localParts(new Date()).dateKey;
 
   const byDay = useMemo(() => {
     const map = {};
@@ -77,7 +76,9 @@ function AvailabilityEditor({ initial, save, saving }) {
   const [week, setWeek] = useState(initial.workingHours);
   const [blocked, setBlocked] = useState(initial.blockedDates);
   const [bookings, setBookings] = useState([]);
-  const [monthKey, setMonthKey] = useState(() => localParts(new Date()).dateKey.slice(0, 7));
+  // Read the clock once per visit.
+  const [today] = useState(() => localParts(new Date()).dateKey);
+  const [monthKey, setMonthKey] = useState(() => today.slice(0, 7));
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -115,7 +116,7 @@ function AvailabilityEditor({ initial, save, saving }) {
     setMonthKey(`${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`);
   };
 
-  const thisMonth = localParts(new Date()).dateKey.slice(0, 7);
+  const thisMonth = today.slice(0, 7);
   const monthName = new Date(`${monthKey}-15T00:00:00Z`).toLocaleDateString("en-IN", { month: "long", year: "numeric" });
 
   return (
@@ -160,7 +161,7 @@ function AvailabilityEditor({ initial, save, saving }) {
         <p className="help" style={{ marginBottom: 10 }}>
           Click a date to mark it as a day off (or open it again). Your bookings are shown on each day.
         </p>
-        <MonthCalendar monthKey={monthKey} week={week} blocked={blocked} bookings={bookings} onToggleDay={toggleDay} />
+        <MonthCalendar monthKey={monthKey} today={today} week={week} blocked={blocked} bookings={bookings} onToggleDay={toggleDay} />
         <div className="cluster legend" style={{ marginTop: 10 }}>
           <span><i className="dot open" /> Working day</span>
           <span><i className="dot off" /> Not working</span>
