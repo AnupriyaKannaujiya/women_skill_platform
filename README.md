@@ -101,6 +101,23 @@ same rules, so two customers cannot take the same slot.
 - Automatic SMS/WhatsApp delivery needs a paid gateway (e.g. MSG91, WhatsApp Cloud API) and is
   not wired in; email and in-app alerts work today.
 
+## Rating, reporting and blocking customers
+
+- **Rate a customer** (provider, after a completed booking): 1–5 stars, quick tags (on time,
+  respectful, late, felt unsafe…) and a private note only admins see. One rating per booking.
+  Customers see their own average on My bookings, never who rated them.
+- **Every request shows the customer's track record** to the provider: average rating from
+  providers, and "⚠️ Reported by N providers" once two or more different providers have an open
+  or upheld report about them.
+- **Report a customer** from any booking: harassment, unsafe, abusive, no-show, payment, fake,
+  other. Harassment/unsafe reports are marked serious, listed first and always emailed to admins.
+  The customer is never told who reported them.
+- **Block a customer** (optionally while reporting). They can no longer book her and see only
+  "not taking bookings from your account". Her blocked list and report statuses are on the
+  Safety page, with Unblock.
+- **Admin → Customer reports:** warn the customer (in-app + email), block them from the platform,
+  close, or dismiss (note required). The reporting provider is told the outcome.
+
 ## Notifications
 
 Signed-in users have a 🔔 bell in the header with an unread count (refreshed on every page
@@ -164,6 +181,7 @@ pending ──accept──► accepted ──complete (after booking date)──
 | Reviews | `POST /api/reviews`, `PUT/DELETE /api/reviews/:id`, `GET /api/reviews/:providerId` |
 | Contact | `POST /api/contact` |
 | Provider settings | `GET/PUT /api/providers/settings` (provider); `GET /api/providers/:id/availability`, `POST /api/providers/:id/quote` (public) |
+| Customer feedback | `POST /api/customer-feedback/ratings`, `GET /api/customer-feedback/ratings/mine`, `POST /api/customer-feedback/reports`, `GET /api/customer-feedback/reports/mine`, `GET/POST/DELETE /api/customer-feedback/blocked[/:id]` (provider); `GET /api/admin/reports`, `PUT /api/admin/reports/:id` (admin) |
 | Safety | `POST /api/sos`, `GET /api/sos/mine`, `PUT /api/sos/:id/resolve`, `GET /api/sos/admin`; `PUT /api/bookings/:id/check-in`, `PUT /api/bookings/:id/check-out` |
 | Notifications | `GET /api/notifications`, `GET /api/notifications/unread-count`, `PUT /api/notifications/:id/read`, `PUT /api/notifications/read-all` |
 | Verification | `GET /api/verification/me`, `POST /api/verification` (provider); `GET /api/admin/verifications`, `GET /api/admin/verifications/:id/document`, `PUT /api/admin/verifications/:id` (admin) |

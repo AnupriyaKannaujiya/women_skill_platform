@@ -116,6 +116,81 @@ function SosHistory() {
   ));
 }
 
+const REPORT_STATUS = {
+  open: ["badge badge-pending", "With the team"],
+  resolved: ["badge badge-accepted", "Action taken"],
+  dismissed: ["badge badge-cancelled", "Closed"],
+};
+const ACTION_TEXT = { warned: "Customer was warned", blocked: "Customer was blocked", none: "" };
+
+function BlockedAndReports() {
+  const toast = useToast();
+  const [blocked, setBlocked] = useState(null);
+  const [reports, setReports] = useState(null);
+  const [version, setVersion] = useState(0);
+
+  useEffect(() => {
+    api.get("/customer-feedback/blocked").then((r) => setBlocked(r.data.customers || [])).catch(() => setBlocked([]));
+    api.get("/customer-feedback/reports/mine").then((r) => setReports(r.data.reports || [])).catch(() => setReports([]));
+  }, [version]);
+
+  const unblock = async (customer) => {
+    try {
+      await api.delete(`/customer-feedback/blocked/${customer._id}`);
+      toast(`${customer.name} can book you again.`, "ok");
+      setVersion((v) => v + 1);
+    } catch (err) {
+      toast(getError(err), "error");
+    }
+  };
+
+  return (
+    <>
+      <section className="card" style={{ marginTop: 16 }}>
+        <h2 style={{ marginBottom: 6 }}>Blocked customers</h2>
+        <p className="muted" style={{ marginBottom: 10 }}>
+          They cannot book you and are not told why. Block someone from "Report customer" on any booking.
+        </p>
+        {!blocked ? (
+          <Loading label="Loading" />
+        ) : blocked.length ? (
+          blocked.map((customer) => (
+            <div className="split blocked-row" key={customer._id}>
+              <span><strong>{customer.name}</strong>{customer.city ? <span className="muted"> · {customer.city}</span> : null}</span>
+              <button className="btn btn-line btn-sm" type="button" onClick={() => unblock(customer)}>Unblock</button>
+            </div>
+          ))
+        ) : (
+          <p className="muted">You have not blocked anyone.</p>
+        )}
+      </section>
+
+      <section className="card" style={{ marginTop: 16 }}>
+        <h2 style={{ marginBottom: 10 }}>Your reports</h2>
+        {!reports ? (
+          <Loading label="Loading" />
+        ) : reports.length ? (
+          reports.map((report) => {
+            const [cls, label] = REPORT_STATUS[report.status] || REPORT_STATUS.open;
+            return (
+              <div className="split blocked-row" key={report._id}>
+                <span>
+                  <strong>{report.customer?.name || "Customer"}</strong>
+                  <span className="muted"> · {formatDate(report.createdAt)}</span>
+                  {ACTION_TEXT[report.action] ? <span className="help" style={{ display: "block" }}>{ACTION_TEXT[report.action]}</span> : null}
+                </span>
+                <span className={cls}>{label}</span>
+              </div>
+            );
+          })
+        ) : (
+          <p className="muted">You have not reported anyone.</p>
+        )}
+      </section>
+    </>
+  );
+}
+
 function Safety() {
   usePageTitle("Safety");
   const { settings, error, saving, save } = useProviderSettings();
@@ -134,6 +209,7 @@ function Safety() {
       </div>
       {error ? <div className="note note-error">{error}</div> : null}
       {settings ? <SafetyForm initial={settings} save={save} saving={saving} /> : !error ? <Loading label="Loading" /> : null}
+      <BlockedAndReports />
       <section className="card" style={{ marginTop: 16 }}>
         <h2 style={{ marginBottom: 10 }}>Your SOS alerts</h2>
         <SosHistory />

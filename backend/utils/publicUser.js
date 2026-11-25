@@ -3,7 +3,8 @@
 // accepts their booking (see getMyBookings).
 const PUBLIC_HIDDEN_FIELDS =
   "-password -email -phone -whatsapp -isBlocked -verification -passwordChangedAt -__v " +
-  "-baseLocation -providerAddress -emergencyContacts -sosNearbyAlerts -emailNotifications";
+  "-baseLocation -providerAddress -emergencyContacts -sosNearbyAlerts -emailNotifications " +
+  "-blockedCustomers -customerRating -customerRatingCount";
 
 // What a signed-in user may see about themselves: everything except secrets
 // and the location of their private ID document.

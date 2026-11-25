@@ -27,6 +27,7 @@ import ProviderServices from "./pages/provider/Services";
 import ProviderAvailability from "./pages/provider/Availability";
 import ProviderSafety from "./pages/provider/Safety";
 import AdminSos from "./pages/admin/Sos";
+import AdminReports from "./pages/admin/Reports";
 
 function App() {
   return (
@@ -66,6 +67,7 @@ function App() {
         <Route path="/provider/availability" element={<ProviderAvailability />} />
         <Route path="/provider/safety" element={<ProviderSafety />} />
         <Route path="/admin/sos" element={<AdminSos />} />
+        <Route path="/admin/reports" element={<AdminReports />} />
 
         <Route path="*" element={<NotFound />} />
       </Route>

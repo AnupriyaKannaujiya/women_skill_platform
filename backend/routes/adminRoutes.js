@@ -20,6 +20,7 @@ const {
   getDocumentLink,
   decideVerification,
 } = require("../controllers/verificationController");
+const { listReports, resolveReport } = require("../controllers/customerFeedbackController");
 
 const router = express.Router();
 
@@ -53,5 +54,9 @@ router.get("/verifications", authMiddleware, adminMiddleware, listVerifications)
 router.get("/verifications/:id/document", authMiddleware, adminMiddleware, getDocumentLink);
 
 router.put("/verifications/:id", authMiddleware, adminMiddleware, decideVerification);
+
+router.get("/reports", authMiddleware, adminMiddleware, listReports);
+
+router.put("/reports/:id", authMiddleware, adminMiddleware, resolveReport);
 
 module.exports = router;

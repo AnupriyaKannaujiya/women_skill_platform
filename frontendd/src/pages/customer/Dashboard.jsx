@@ -13,6 +13,8 @@ function CustomerDashboard() {
   usePageTitle("My bookings");
   const [filter, setFilter] = useState("all");
   const [dashboard, setDashboard] = useState(null);
+  // How providers rated this customer (average only; who rated is never shown).
+  const [myRating, setMyRating] = useState(null);
   const [bookings, setBookings] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -25,10 +27,14 @@ function CustomerDashboard() {
 
   useEffect(() => {
     let cancelled = false;
-    Promise.allSettled([api.get("/bookings/customer/dashboard"), api.get("/bookings/my")])
-      .then(([stats, list]) => {
+    Promise.allSettled([api.get("/bookings/customer/dashboard"), api.get("/bookings/my"), api.get("/auth/profile")])
+      .then(([stats, list, profile]) => {
         if (cancelled) return;
         if (stats.status === "fulfilled") setDashboard(stats.value.data.dashboard);
+        if (profile.status === "fulfilled") {
+          const me = profile.value.data?.user || profile.value.data;
+          setMyRating({ rating: me?.customerRating || 0, count: me?.customerRatingCount || 0 });
+        }
         if (list.status === "fulfilled") setBookings(list.value.data.bookings || []);
         if (stats.status === "rejected" && list.status === "rejected") {
           setError(getError(list.reason, "Could not load your bookings."));
@@ -74,6 +80,13 @@ function CustomerDashboard() {
     <div>
       <p className="eyebrow">Customer</p>
       <h1 className="section-title" style={{ margin: "8px 0 16px" }}>My bookings</h1>
+      {myRating?.count ? (
+        <p className="note" style={{ marginBottom: 14 }}>
+          Your rating from providers: <strong>★ {Number(myRating.rating).toFixed(1)}</strong> ({myRating.count} booking
+          {myRating.count === 1 ? "" : "s"}). Being on time, respectful and paying promptly keeps it high — providers see it
+          when you book.
+        </p>
+      ) : null}
       {error ? <div className="note note-error">{error}</div> : null}
       <div className="stat-grid">
         {cards.map(([label, value]) => (

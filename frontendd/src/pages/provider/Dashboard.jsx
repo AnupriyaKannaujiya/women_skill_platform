@@ -4,6 +4,7 @@ import api from "../../lib/api";
 import { useToast } from "../../context/ToastContext";
 import { ConfirmModal, Empty, Loading, Modal, StatusBadge } from "../../components/ui";
 import BookingDetails from "../../components/BookingDetails";
+import { CustomerSafetyLine, RateCustomerModal, ReportCustomerModal } from "../../components/CustomerFeedback";
 import { usePageTitle } from "../../lib/usePageTitle";
 import { formatDate, formatMoney, getError, isOverdue, phoneHref, skillList, unwrapUser } from "../../lib/format";
 
@@ -38,6 +39,10 @@ function ProviderDashboard() {
   const [filter, setFilter] = useState("all");
   const [confirm, setConfirm] = useState(null);
   const [completing, setCompleting] = useState(null);
+  // Customer feedback: which completed bookings she rated, and open dialogs.
+  const [rated, setRated] = useState({});
+  const [ratingFor, setRating] = useState(null);
+  const [reporting, setReporting] = useState(null);
   const [overtime, setOvertime] = useState("0");
   // Read the clock once per visit; the backend re-checks the date on completion anyway.
   const [now] = useState(() => Date.now());
@@ -47,10 +52,14 @@ function ProviderDashboard() {
       api.get("/auth/profile"),
       api.get("/bookings/provider/dashboard"),
       api.get("/bookings/provider"),
-    ]).then(([profile, stats, list]) => {
+      api.get("/customer-feedback/ratings/mine"),
+    ]).then(([profile, stats, list, ratings]) => {
       if (profile.status === "fulfilled") setUser(unwrapUser(profile.value.data));
       if (stats.status === "fulfilled") setDashboard(stats.value.data.dashboard);
       if (list.status === "fulfilled") setBookings(list.value.data.bookings || []);
+      if (ratings.status === "fulfilled") {
+        setRated(Object.fromEntries((ratings.value.data.ratings || []).map((r) => [String(r.booking), r.rating])));
+      }
       if (list.status === "rejected") setError(getError(list.reason, "Could not load requests."));
       setLoading(false);
     });
@@ -225,6 +234,7 @@ function ProviderDashboard() {
                   ) : (
                     <p className="muted">No phone shared</p>
                   )}
+                  <CustomerSafetyLine safety={booking.customer?.safety} />
                 </div>
                 <StatusBadge status={isOverdue(booking, now) ? "overdue" : booking.status} />
               </div>
@@ -283,10 +293,40 @@ function ProviderDashboard() {
               {booking.status === "expired" ? (
                 <p className="help">This request expired because it was not answered before the booked time.</p>
               ) : null}
+              {booking.customer?._id ? (
+                <div className="feedback-row">
+                  {booking.status === "completed" ? (
+                    rated[booking._id] ? (
+                      <span className="help">You rated this customer ★ {rated[booking._id]}</span>
+                    ) : (
+                      <button className="btn btn-line btn-sm" type="button" onClick={() => setRating(booking)}>
+                        ⭐ Rate customer
+                      </button>
+                    )
+                  ) : null}
+                  <button className="link-btn" type="button" onClick={() => setReporting(booking)}>
+                    Report customer
+                  </button>
+                </div>
+              ) : null}
             </article>
           );
         })
       )}
+
+      {ratingFor ? (
+        <RateCustomerModal
+          booking={ratingFor}
+          onClose={() => setRating(null)}
+          onDone={(saved) => {
+            setRated((map) => ({ ...map, [ratingFor._id]: saved.rating }));
+            setRating(null);
+          }}
+        />
+      ) : null}
+      {reporting ? (
+        <ReportCustomerModal booking={reporting} onClose={() => setReporting(null)} onDone={() => setReporting(null)} />
+      ) : null}
 
       {completing ? (
         <Modal title="Mark this work completed?" onClose={() => setCompleting(null)}>

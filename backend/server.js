@@ -19,6 +19,7 @@ const verificationRoutes = require("./routes/verificationRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const providerRoutes = require("./routes/providerRoutes");
 const sosRoutes = require("./routes/sosRoutes");
+const customerFeedbackRoutes = require("./routes/customerFeedbackRoutes");
 const errorHandler = require("./middleware/errorMiddleware");
 
 const missing = ["MONGO_URI", "JWT_SECRET", "CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET"]
@@ -94,6 +95,7 @@ app.use("/api/verification", verificationRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/providers", providerRoutes);
 app.use("/api/sos", sosRoutes);
+app.use("/api/customer-feedback", customerFeedbackRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

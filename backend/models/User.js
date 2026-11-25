@@ -182,6 +182,13 @@ const userSchema = new mongoose.Schema(
       },
     ],
 
+    // Safety: customers she does not want bookings from (they are not told).
+    blockedCustomers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+
+    // ---- Customer: how providers rated them (average of CustomerRating) ----
+    customerRating: { type: Number, default: 0 },
+    customerRatingCount: { type: Number, default: 0 },
+
     // Safety: receive SOS alerts from providers near her base location.
     sosNearbyAlerts: { type: Boolean, default: true },
 

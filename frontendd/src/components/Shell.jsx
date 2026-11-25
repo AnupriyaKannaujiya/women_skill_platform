@@ -58,6 +58,7 @@ function SideNav() {
       { to: "/admin/bookings", label: "Bookings" },
       { to: "/admin/reviews", label: "Reviews" },
       { to: "/admin/sos", label: "🚨 SOS alerts" },
+      { to: "/admin/reports", label: "Customer reports" },
       { to: "/admin/verifications", label: "Verifications" },
       { to: "/admin/messages", label: "Messages" },
     );

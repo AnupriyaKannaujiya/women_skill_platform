@@ -7,6 +7,7 @@ const { expireStalePendingBookings, overdueFilter } = require("../utils/bookingM
 const { notify, formatWhen, rupees } = require("../utils/notify");
 const { quote, isLocation } = require("../utils/pricing");
 const { checkSlot } = require("../utils/availability");
+const { safetySummaries } = require("../utils/customerSafety");
 
 const HOUR_MS = 60 * 60 * 1000;
 // She can check in from an hour before the start time.
@@ -98,6 +99,14 @@ const createBooking = async (req, res) => {
         success: false,
         code: "PHONE_REQUIRED",
         message: "Add your phone number in your profile before booking, so she can reach you.",
+      });
+    }
+    // A customer she blocked is turned away without being told why.
+    if ((providerUser.blockedCustomers || []).some((id) => String(id) === String(req.user._id))) {
+      return res.status(403).json({
+        success: false,
+        code: "PROVIDER_UNAVAILABLE",
+        message: "This provider is not taking bookings from your account. Please choose someone else.",
       });
     }
     if (providerUser.requireVerifiedCustomers && !req.user.isVerified) {
@@ -214,7 +223,14 @@ const getProviderBookings = async (req, res) => {
       provider: req.user.id,
     })
       .populate("customer", "name phone whatsapp isVerified")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // What other providers think of each customer: rating and how many reported them.
+    const summaries = await safetySummaries(bookings.map((b) => b.customer?._id));
+    for (const booking of bookings) {
+      if (booking.customer) booking.customer.safety = summaries[String(booking.customer._id)];
+    }
 
     res.status(200).json({
       success: true,

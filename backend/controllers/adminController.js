@@ -9,6 +9,8 @@ const Review = require("../models/Review");
 const ContactMessage = require("../models/ContactMessage");
 const Notification = require("../models/Notification");
 const SosAlert = require("../models/SosAlert");
+const CustomerReport = require("../models/CustomerReport");
+const CustomerRating = require("../models/CustomerRating");
 const { expireStalePendingBookings, overdueFilter } = require("../utils/bookingMaintenance");
 
 const getAllUsers = async (req, res) => {
@@ -68,6 +70,11 @@ const deleteUser = async (req, res) => {
     });
 
     await Notification.deleteMany({ user: user._id });
+
+    // Ratings and reports given by or about this person.
+    await CustomerRating.deleteMany({ $or: [{ provider: user._id }, { customer: user._id }] });
+    await CustomerReport.deleteMany({ $or: [{ reporter: user._id }, { customer: user._id }] });
+    await User.updateMany({ blockedCustomers: user._id }, { $pull: { blockedCustomers: user._id } });
     await user.deleteOne();
 
     for (const providerId of reviewedProviders) {
@@ -87,54 +94,48 @@ const getDashboardStats = async (req, res) => {
   try {
     await expireStalePendingBookings();
 
-    const totalUsers = await User.countDocuments();
-
-    const totalProviders = await User.countDocuments({
-      role: "provider",
-    });
-
-    const totalCustomers = await User.countDocuments({
-      role: "customer",
-    });
-
-    const totalAdmins = await User.countDocuments({
-      role: "admin",
-    });
-
-    const totalBookings = await Booking.countDocuments();
-
-    const pendingBookings = await Booking.countDocuments({
-      status: "pending",
-    });
-
-    const acceptedBookings = await Booking.countDocuments({
-      status: "accepted",
-    });
-
-    const completedBookings = await Booking.countDocuments({
-      status: "completed",
-    });
-
-    const rejectedBookings = await Booking.countDocuments({ status: "rejected" });
-
-    const cancelledBookings = await Booking.countDocuments({ status: "cancelled" });
-
-    const expiredBookings = await Booking.countDocuments({ status: "expired" });
-
-    const overdueBookings = await Booking.countDocuments(overdueFilter());
-
-    const totalReviews = await Review.countDocuments();
-
-    const unreadMessages = await ContactMessage.countDocuments({ isRead: false });
-
-    const pendingVerifications = await User.countDocuments({
-      role: { $in: ["provider", "customer"] },
-      "verification.status": "pending",
-    });
-
-    const verifiedProviders = await User.countDocuments({ role: "provider", isVerified: true });
-
-    const activeSos = await SosAlert.countDocuments({ status: "active" });
+    // All counts run at once; one at a time made the overview take several seconds.
+    const [
+      totalUsers,
+      totalProviders,
+      totalCustomers,
+      totalAdmins,
+      totalBookings,
+      pendingBookings,
+      acceptedBookings,
+      completedBookings,
+      rejectedBookings,
+      cancelledBookings,
+      expiredBookings,
+      overdueBookings,
+      totalReviews,
+      unreadMessages,
+      pendingVerifications,
+      verifiedProviders,
+      activeSos,
+      openReports,
+      seriousReports,
+    ] = await Promise.all([
+      User.countDocuments(),
+      User.countDocuments({ role: "provider" }),
+      User.countDocuments({ role: "customer" }),
+      User.countDocuments({ role: "admin" }),
+      Booking.countDocuments(),
+      Booking.countDocuments({ status: "pending" }),
+      Booking.countDocuments({ status: "accepted" }),
+      Booking.countDocuments({ status: "completed" }),
+      Booking.countDocuments({ status: "rejected" }),
+      Booking.countDocuments({ status: "cancelled" }),
+      Booking.countDocuments({ status: "expired" }),
+      Booking.countDocuments(overdueFilter()),
+      Review.countDocuments(),
+      ContactMessage.countDocuments({ isRead: false }),
+      User.countDocuments({ role: { $in: ["provider", "customer"] }, "verification.status": "pending" }),
+      User.countDocuments({ role: "provider", isVerified: true }),
+      SosAlert.countDocuments({ status: "active" }),
+      CustomerReport.countDocuments({ status: "open" }),
+      CustomerReport.countDocuments({ status: "open", serious: true }),
+    ]);
 
     res.status(200).json({
       success: true,
@@ -156,6 +157,8 @@ const getDashboardStats = async (req, res) => {
         pendingVerifications,
         verifiedProviders,
         activeSos,
+        openReports,
+        seriousReports,
       },
     });
   } catch (error) {

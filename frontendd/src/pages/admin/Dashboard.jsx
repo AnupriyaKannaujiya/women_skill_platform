@@ -114,6 +114,13 @@ function AdminDashboard() {
           <Link to="/admin/messages">Open messages</Link>
         </div>
       ) : null}
+      {stats?.openReports ? (
+        <div className={stats.seriousReports ? "note note-error" : "note"} style={{ marginBottom: 14 }}>
+          {stats.seriousReports ? <strong>⚠️ {stats.seriousReports} safety report{stats.seriousReports === 1 ? "" : "s"}. </strong> : null}
+          {stats.openReports} customer report{stats.openReports === 1 ? "" : "s"} waiting for review.{" "}
+          <Link to="/admin/reports">Review reports</Link>
+        </div>
+      ) : null}
       {stats?.activeSos ? (
         <div className="note note-error" role="alert" style={{ marginBottom: 14 }}>
           <strong>🚨 {stats.activeSos} active SOS alert{stats.activeSos === 1 ? "" : "s"}.</strong>{" "}
